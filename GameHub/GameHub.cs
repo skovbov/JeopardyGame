@@ -114,9 +114,8 @@ public class GameHub : Hub
                 await Task.Delay(10000); // 10 sekunder
                 if (game.IsBuzzingActive)
                 {
-                    // First timer expired - notify everyone and start extended 20-second timer
+                    // First timer expired - notify players about extended time
                     await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
-                    await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimerStarted");
                     
                     // Start extended 20-second timer for remaining players
                     await Task.Delay(20000); // 20 sekunder ekstra

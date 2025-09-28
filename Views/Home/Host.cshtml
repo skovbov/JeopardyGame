@@ -486,24 +486,6 @@
             document.getElementById('gameBoard').classList.remove('hidden');
         });
 
-        connection.on("BuzzTimeExpired", function () {
-            // Immediately start the extended timer visualization
-            startExtendedBuzzTimer();
-        });
-
-        connection.on("ExtendedBuzzTimeExpired", function () {
-            stopBuzzTimer();
-            // Hide progress bar and show timer with final message
-            const timerDisplay = document.getElementById('timerDisplay');
-            const progressContainer = document.getElementById('progressContainer');
-            
-            progressContainer.style.display = 'none';
-            timerDisplay.style.display = 'block';
-            timerDisplay.textContent = "Alle tider udløbet!";
-            timerDisplay.classList.add('expired');
-            timerDisplay.style.background = '#666';
-        });
-
         function renderBoard() {
             const board = document.getElementById('gameBoard');
             board.innerHTML = '';
@@ -566,16 +548,15 @@
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
-                
+                timerDisplay.textContent = gameData.timeLeft;
+
                 if (gameData.timeLeft <= 0) {
                     clearInterval(gameData.buzzTimer);
                     gameData.buzzTimer = null;
-                    timerDisplay.textContent = "0";
-                    // The extended timer will start via the BuzzTimeExpired event
+                    // Immediately transition to extended timer when reaching 0
+                    startExtendedBuzzTimer();
                     return; // Exit the interval function
                 }
-                
-                timerDisplay.textContent = gameData.timeLeft;
             }, 1000);
         }
 
@@ -754,4 +735,4 @@
         }, false);
     </script>
 </body>
-</html>
+</html></html>
