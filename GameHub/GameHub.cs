@@ -79,18 +79,7 @@ public class GameHub : Hub
             board = game.Board
         });
 
-        // Start 10 sekund timer for auto-reset
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(10000); // 10 sekunder
-            if (game.IsBuzzingActive && game.CurrentBuzzes.Count == 0)
-            {
-                game.IsBuzzingActive = false;
-                await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
-                await Clients.Client(game.HostConnectionId).SendAsync("BuzzTimeExpired");
-            }
-        });
-
+        // Don't start timer here - timer will start when first player buzzes
         await Clients.Group(game.GameCode).SendAsync("BuzzingStarted");
     }
 
@@ -113,6 +102,34 @@ public class GameHub : Hub
         };
 
         game.CurrentBuzzes.Add(buzzEntry);
+
+        // Start 10 second timer only when FIRST player buzzes
+        if (game.CurrentBuzzes.Count == 1)
+        {
+            // Notify all players that the timer has started
+            await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted");
+            
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(10000); // 10 sekunder
+                if (game.IsBuzzingActive)
+                {
+                    // First timer expired - notify everyone and start extended 20-second timer
+                    await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
+                    await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimerStarted");
+                    
+                    // Start extended 20-second timer for remaining players
+                    await Task.Delay(20000); // 20 sekunder ekstra
+                    if (game.IsBuzzingActive)
+                    {
+                        // Extended timer expired - completely stop buzzing
+                        game.IsBuzzingActive = false;
+                        await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
+                        await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
+                    }
+                }
+            });
+        }
 
         // Send opdatering til værten
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new

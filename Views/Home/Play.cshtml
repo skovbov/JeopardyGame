@@ -424,19 +424,26 @@
             buzzOverlay.classList.remove('hidden', 'disabled');
             overlayInfo.textContent = `Spørgsmål: ${gameData.currentQuestionValue} point`;
 
-            // Auto-hide efter 10 sekunder
-            setTimeout(() => {
-                if (!buzzOverlay.classList.contains('hidden')) {
-                    buzzOverlay.classList.add('disabled');
-                    document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
-                }
-            }, 10000);
+            // Don't set automatic timeout - players can buzz indefinitely until someone actually buzzes
         });
 
         connection.on("BuzzDisabled", function () {
             const buzzOverlay = document.getElementById('buzzOverlay');
             buzzOverlay.classList.add('disabled');
             document.querySelector('.buzz-text').textContent = '✅ Du har buzzet!';
+        });
+
+        // Add new event handler for when buzz timer starts (after first player buzzes)
+        connection.on("BuzzTimerStarted", function () {
+            // Start 10 second countdown for other players to buzz, but don't disable after 10 seconds
+            // The extended timer will handle final disabling
+            setTimeout(() => {
+                const buzzOverlay = document.getElementById('buzzOverlay');
+                if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                    // Don't disable here - just change text to indicate extended time
+                    document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+                }
+            }, 10000);
         });
 
         connection.on("BuzzReset", function () {
@@ -456,14 +463,6 @@
             document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
             document.getElementById('currentQuestion').classList.add('hidden');
             document.getElementById('gameStatus').textContent = 'Venter på næste spørgsmål';
-        });
-
-        connection.on("BuzzTimeExpired", function () {
-            const buzzOverlay = document.getElementById('buzzOverlay');
-            if (!buzzOverlay.classList.contains('hidden')) {
-                buzzOverlay.classList.add('disabled');
-                document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
-            }
         });
 
         connection.on("ScoreUpdated", function (data) {
@@ -554,6 +553,23 @@
             }
             lastTouchEnd = now;
         }, false);
+
+        connection.on("BuzzTimeExpired", function () {
+            // Don't disable buzz overlay yet - extended timer starts
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+            }
+        });
+
+        // Add new event handler for extended timer expiration
+        connection.on("ExtendedBuzzTimeExpired", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                buzzOverlay.classList.add('disabled');
+                document.querySelector('.buzz-text').textContent = '⏰ Alle tider udløbet!';
+            }
+        });
     </script>
 </body>
 </html>

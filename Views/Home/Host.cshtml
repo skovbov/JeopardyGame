@@ -135,10 +135,15 @@
             font-weight: bold;
             margin: 10px 0;
             text-align: center;
+            transition: background-color 0.3s ease;
         }
 
             .timer-display.expired {
                 background: #666;
+            }
+
+            .timer-display.extended {
+                background: #ff9500;
             }
 
         .buzz-list {
@@ -415,7 +420,10 @@
         });
 
         connection.on("BuzzReceived", function (data) {
-            startBuzzTimer();
+            // Start timer only when first buzz is received
+            if (data.buzzes.length === 1) {
+                startBuzzTimer();
+            }
             showBuzzPanel(data.buzzes);
         });
 
@@ -426,9 +434,21 @@
         });
 
         connection.on("BuzzTimeExpired", function () {
+            // Don't stop timer here anymore - extended timer will start
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.textContent = "Første periode udløbet - venter på forlænget tid...";
+            timerDisplay.classList.add('expired');
+        });
+
+        // New event handler for extended 20-second timer
+        connection.on("ExtendedBuzzTimerStarted", function () {
+            startExtendedBuzzTimer();
+        });
+
+        connection.on("ExtendedBuzzTimeExpired", function () {
             stopBuzzTimer();
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.textContent = "Tid udløbet!";
+            timerDisplay.textContent = "Alle tider udløbet!";
             timerDisplay.classList.add('expired');
         });
 
@@ -468,6 +488,13 @@
             // Vis buzz-panelet og skjul brættet med det samme
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
+            
+            // Show waiting state
+            const timerDisplay = document.getElementById('timerDisplay');
+            const buzzList = document.getElementById('buzzList');
+            timerDisplay.textContent = "Venter på buzz...";
+            timerDisplay.classList.remove('expired');
+            buzzList.innerHTML = '';
         }
 
         function startBuzzTimer() {
@@ -492,12 +519,35 @@
             }, 1000);
         }
 
-
         function stopBuzzTimer() {
             if (gameData.buzzTimer) {
                 clearInterval(gameData.buzzTimer);
                 gameData.buzzTimer = null;
             }
+        }
+
+        function startExtendedBuzzTimer() {
+            // Stop any existing timer
+            stopBuzzTimer();
+
+            gameData.timeLeft = 20;
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.classList.remove('expired');
+            timerDisplay.style.background = '#ff9500'; // Orange color for extended time
+            timerDisplay.textContent = `Extra tid: ${gameData.timeLeft}`;
+
+            gameData.buzzTimer = setInterval(() => {
+                gameData.timeLeft--;
+                timerDisplay.textContent = `Extra tid: ${gameData.timeLeft}`;
+
+                if (gameData.timeLeft < 0) {
+                    clearInterval(gameData.buzzTimer);
+                    gameData.buzzTimer = null;
+                    timerDisplay.textContent = "Alle tider udløbet!";
+                    timerDisplay.classList.add('expired');
+                    timerDisplay.style.background = '#666';
+                }
+            }, 1000);
         }
 
         function updatePlayersDisplay() {
@@ -538,7 +588,15 @@
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
 
+            const timerDisplay = document.getElementById('timerDisplay');
             const buzzList = document.getElementById('buzzList');
+            
+            // If no buzzes yet, show waiting state
+            if (buzzes.length === 0) {
+                timerDisplay.textContent = "Venter på buzz...";
+                timerDisplay.classList.remove('expired');
+            }
+            
             buzzList.innerHTML = '';
 
             buzzes.forEach(buzz => {
@@ -561,6 +619,10 @@
             stopBuzzTimer();
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
+            
+            // Reset timer display style
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.style.background = '#ff6b6b';
             
             // Notify players to return to board view
             connection.invoke("HostReturnToBoard");
