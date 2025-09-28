@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
@@ -77,15 +80,6 @@
         .btn-host {
             background: linear-gradient(45deg, #f093fb, #f5576c);
         }
-
-        @@media (max-width: 768px) {
-            .btn
-
-        {
-            width: 100%;
-        }
-
-        }
     </style>
 </head>
 <body>
@@ -127,6 +121,24 @@
             localStorage.setItem('hostName', name);
             window.location.href = '/Home/Host';
         }
+
+        // Make buttons responsive on mobile
+        function checkMobile() {
+            const buttons = document.querySelectorAll('.btn');
+            if (window.innerWidth <= 768) {
+                buttons.forEach(btn => {
+                    btn.style.width = '100%';
+                });
+            } else {
+                buttons.forEach(btn => {
+                    btn.style.width = '250px';
+                });
+            }
+        }
+
+        // Check on load and resize
+        window.addEventListener('load', checkMobile);
+        window.addEventListener('resize', checkMobile);
     </script>
 </body>
 </html>

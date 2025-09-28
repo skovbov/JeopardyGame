@@ -1,8 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Jeopardy - Spiller</title>
     <style>
         * {
@@ -16,7 +19,8 @@
             background: linear-gradient(135deg, #1e3c72, #2a5298);
             color: white;
             min-height: 100vh;
-            padding: 20px;
+            padding: 10px;
+            touch-action: manipulation;
         }
 
         .container {
@@ -27,26 +31,26 @@
         .player-header {
             text-align: center;
             background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
+            padding: 15px;
             border-radius: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             backdrop-filter: blur(10px);
         }
 
         .game-board {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin: 20px 0;
+            gap: 8px;
+            margin: 15px 0;
         }
 
         .category-header {
             background: #FFD700;
             color: #000;
-            padding: 15px;
+            padding: 10px;
             text-align: center;
             font-weight: bold;
-            font-size: 1.1em;
+            font-size: 0.9em;
             border-radius: 8px;
             text-transform: uppercase;
         }
@@ -54,12 +58,16 @@
         .question-tile {
             background: #000080;
             color: #FFD700;
-            padding: 25px;
+            padding: 15px;
             text-align: center;
-            font-size: 1.6em;
+            font-size: 1.2em;
             font-weight: bold;
             border-radius: 8px;
             border: 3px solid #FFD700;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
             .question-tile.used {
@@ -80,13 +88,14 @@
             justify-content: center;
             align-items: center;
             color: white;
-            font-size: 4em;
+            font-size: 3em;
             font-weight: bold;
             cursor: pointer;
             z-index: 1000;
             transition: all 0.3s ease;
             text-align: center;
             padding: 20px;
+            touch-action: manipulation;
         }
 
             .buzz-overlay:hover {
@@ -131,29 +140,29 @@
 
         .status {
             background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin: 20px 0;
+            margin: 15px 0;
             text-align: center;
             backdrop-filter: blur(10px);
         }
 
         .players-list {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
         }
 
         .player-card {
             background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
+            padding: 10px;
             border-radius: 10px;
             text-align: center;
         }
 
         .player-score {
-            font-size: 1.3em;
+            font-size: 1.2em;
             color: #FFD700;
             font-weight: bold;
         }
@@ -168,6 +177,7 @@
             cursor: pointer;
             margin: 10px;
             transition: all 0.3s ease;
+            touch-action: manipulation;
         }
 
             .btn:hover {
@@ -181,9 +191,9 @@
 
         .current-question {
             background: rgba(255, 215, 0, 0.2);
-            padding: 20px;
+            padding: 15px;
             border-radius: 10px;
-            margin: 20px 0;
+            margin: 15px 0;
             text-align: center;
             border: 2px solid #FFD700;
         }
@@ -192,23 +202,122 @@
             display: none;
         }
 
-        @@media (max-width: 768px) {
+        /* Mobile-first responsive design */
+        @@media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
             .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 5px;
+            }
+
+            .category-header {
+                padding: 8px 4px;
+                font-size: 0.7em;
+            }
+
+            .question-tile {
+                padding: 8px;
+                font-size: 1em;
+                min-height: 50px;
+            }
+
+            .buzz-overlay {
+                font-size: 2.5em;
+                padding: 15px;
+            }
+
+            .players-list {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 8px;
             }
 
-            .question-tile {
-                padding: 15px;
+            .player-card {
+                padding: 8px;
+            }
+
+            .player-score {
+                font-size: 1.1em;
+            }
+
+            .player-header {
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .player-header h1 {
+                font-size: 1.5em;
+            }
+
+            .player-header h2 {
                 font-size: 1.2em;
             }
 
+            .status {
+                padding: 10px;
+                margin: 10px 0;
+                font-size: 0.9em;
+            }
+
+            .current-question {
+                padding: 10px;
+                margin: 10px 0;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9em;
+                margin: 5px;
+            }
+        }
+
+        @@media (max-width: 768px) and (min-width: 481px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+
+            .question-tile {
+                padding: 12px;
+                font-size: 1.1em;
+                min-height: 55px;
+            }
+
             .buzz-overlay {
-                font-size: 3em;
+                font-size: 2.8em;
             }
 
             .players-list {
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* Landscape orientation adjustments for mobile */
+        @@media (max-width: 896px) and (orientation: landscape) {
+            .game-board {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 4px;
+            }
+
+            .question-tile {
+                padding: 8px 4px;
+                font-size: 0.9em;
+                min-height: 45px;
+            }
+
+            .category-header {
+                padding: 6px 2px;
+                font-size: 0.6em;
+            }
+
+            .buzz-overlay {
+                font-size: 2.2em;
+            }
+
+            .players-list {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             }
         }
     </style>
@@ -315,19 +424,26 @@
             buzzOverlay.classList.remove('hidden', 'disabled');
             overlayInfo.textContent = `Spørgsmål: ${gameData.currentQuestionValue} point`;
 
-            // Auto-hide efter 10 sekunder
-            setTimeout(() => {
-                if (!buzzOverlay.classList.contains('hidden')) {
-                    buzzOverlay.classList.add('disabled');
-                    document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
-                }
-            }, 10000);
+            // Don't set automatic timeout - players can buzz indefinitely until someone actually buzzes
         });
 
         connection.on("BuzzDisabled", function () {
             const buzzOverlay = document.getElementById('buzzOverlay');
             buzzOverlay.classList.add('disabled');
             document.querySelector('.buzz-text').textContent = '✅ Du har buzzet!';
+        });
+
+        // Add new event handler for when buzz timer starts (after first player buzzes)
+        connection.on("BuzzTimerStarted", function () {
+            // Start 10 second countdown for other players to buzz, but don't disable after 10 seconds
+            // The extended timer will handle final disabling
+            setTimeout(() => {
+                const buzzOverlay = document.getElementById('buzzOverlay');
+                if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                    // Don't disable here - just change text to indicate extended time
+                    document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+                }
+            }, 10000);
         });
 
         connection.on("BuzzReset", function () {
@@ -339,12 +455,14 @@
             document.getElementById('gameStatus').textContent = 'Klar til næste spørgsmål';
         });
 
-        connection.on("BuzzTimeExpired", function () {
+        // Add new event handler for when host returns to board
+        connection.on("HostReturnedToBoard", function () {
             const buzzOverlay = document.getElementById('buzzOverlay');
-            if (!buzzOverlay.classList.contains('hidden')) {
-                buzzOverlay.classList.add('disabled');
-                document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
-            }
+            buzzOverlay.classList.add('hidden');
+            buzzOverlay.classList.remove('disabled');
+            document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
+            document.getElementById('currentQuestion').classList.add('hidden');
+            document.getElementById('gameStatus').textContent = 'Venter på næste spørgsmål';
         });
 
         connection.on("ScoreUpdated", function (data) {
@@ -424,6 +542,33 @@
         connection.onclose(function () {
             alert('Forbindelse til serveren blev afbrudt');
             window.location.href = '/';
+        });
+
+        // Prevent zoom on double-tap on iOS
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        connection.on("BuzzTimeExpired", function () {
+            // Don't disable buzz overlay yet - extended timer starts
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+            }
+        });
+
+        // Add new event handler for extended timer expiration
+        connection.on("ExtendedBuzzTimeExpired", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                buzzOverlay.classList.add('disabled');
+                document.querySelector('.buzz-text').textContent = '⏰ Alle tider udløbet!';
+            }
         });
     </script>
 </body>

@@ -1,8 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Jeopardy - Vært</title>
     <style>
         * {
@@ -17,6 +20,7 @@
             color: white;
             min-height: 100vh;
             padding: 20px;
+            touch-action: manipulation;
         }
 
         .container {
@@ -131,11 +135,65 @@
             font-weight: bold;
             margin: 10px 0;
             text-align: center;
+            transition: background-color 0.3s ease;
         }
 
             .timer-display.expired {
                 background: #666;
             }
+
+            .timer-display.extended {
+                background: #ff9500;
+            }
+
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+            position: relative;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 1s linear;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+
+        @@keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
 
         .buzz-list {
             margin: 15px 0;
@@ -199,18 +257,152 @@
         }
 
         @@media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
             .game-board {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
+                gap: 6px;
             }
 
             .question-tile {
-                padding: 20px;
-                font-size: 1.4em;
+                padding: 15px 8px;
+                font-size: 1.2em;
+                min-height: 50px;
+            }
+
+            .category-header {
+                padding: 8px 4px;
+                font-size: 0.8em;
             }
 
             .players-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .game-code {
+                font-size: 2em;
+                padding: 10px;
+            }
+
+            .host-header, .players-section, .buzz-panel {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .player-card {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9em;
+                margin: 3px;
+            }
+
+            .buzz-item {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+
+            .score-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .score-input {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+
+            .question-tile {
+                padding: 10px 6px;
+                font-size: 1em;
+                min-height: 45px;
+            }
+
+            .category-header {
+                padding: 6px 2px;
+                font-size: 0.7em;
+            }
+
+            .game-code {
+                font-size: 1.6em;
+                padding: 8px;
+            }
+
+            .host-header h1 {
+                font-size: 1.5em;
+            }
+
+            .players-section h2 {
+                font-size: 1.2em;
+            }
+
+            .buzz-panel h2 {
+                font-size: 1.2em;
+            }
+
+            .timer-display {
+                font-size: 1.2em;
+                padding: 8px 15px;
+            }
+
+            .btn {
+                padding: 8px 15px;
+                font-size: 0.8em;
+                margin: 2px;
+            }
+
+            .buzz-item {
+                padding: 8px;
+                font-size: 0.8em;
+            }
+
+            .buzz-order {
+                padding: 6px 10px;
+            }
+
+            .player-score {
+                font-size: 1.2em;
+            }
+        }
+
+        @@media (max-width: 896px) and (orientation: landscape) {
+            .game-board {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 3px;
+            }
+
+            .question-tile {
+                padding: 8px 4px;
+                font-size: 0.9em;
+                min-height: 40px;
+            }
+
+            .category-header {
+                padding: 4px 2px;
+                font-size: 0.6em;
+            }
+
+            .players-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             }
         }
     </style>
@@ -233,6 +425,10 @@
         <div id="buzzPanel" class="buzz-panel hidden">
             <h2>Spillere der buzzede:</h2>
             <div id="timerDisplay" class="timer-display">10</div>
+            <div id="progressContainer" class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+                <div id="progressText" class="progress-text">Extra tid: 20</div>
+            </div>
             <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
             <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
@@ -277,7 +473,10 @@
         });
 
         connection.on("BuzzReceived", function (data) {
-            startBuzzTimer();
+            // Start timer only when first buzz is received
+            if (data.buzzes.length === 1) {
+                startBuzzTimer();
+            }
             showBuzzPanel(data.buzzes);
         });
 
@@ -287,11 +486,17 @@
             document.getElementById('gameBoard').classList.remove('hidden');
         });
 
-        connection.on("BuzzTimeExpired", function () {
+        connection.on("ExtendedBuzzTimeExpired", function () {
             stopBuzzTimer();
+            // Hide progress bar and show timer with final message
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.textContent = "Tid udløbet!";
+            const progressContainer = document.getElementById('progressContainer');
+            
+            progressContainer.style.display = 'none';
+            timerDisplay.style.display = 'block';
+            timerDisplay.textContent = "I didnt get it";
             timerDisplay.classList.add('expired');
+            timerDisplay.style.background = '#666';
         });
 
         function renderBoard() {
@@ -330,6 +535,19 @@
             // Vis buzz-panelet og skjul brættet med det samme
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
+            
+            // Show waiting state - hide progress bar initially until first buzz
+            const timerDisplay = document.getElementById('timerDisplay');
+            const buzzList = document.getElementById('buzzList');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            timerDisplay.style.display = 'block';
+            timerDisplay.textContent = "Venter på buzz...";
+            timerDisplay.classList.remove('expired');
+            timerDisplay.style.background = '#ff6b6b';
+            
+            progressContainer.style.display = 'none';
+            buzzList.innerHTML = '';
         }
 
         function startBuzzTimer() {
@@ -338,28 +556,94 @@
 
             gameData.timeLeft = 10;
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.classList.remove('expired');
-            timerDisplay.textContent = gameData.timeLeft; // vis første tal
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Hide regular timer display and show progress bar for first 10 seconds too
+            timerDisplay.style.display = 'none';
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar for 10-second timer
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)'; // Red for first timer
+            progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
-                timerDisplay.textContent = gameData.timeLeft;
+                progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
+                
+                // Calculate progress percentage (0% at start, 100% at end)
+                const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
+                progressBar.style.width = progressPercent + '%';
 
-                if (gameData.timeLeft < 0) {
+                if (gameData.timeLeft <= 0) {
                     clearInterval(gameData.buzzTimer);
                     gameData.buzzTimer = null;
-                    timerDisplay.textContent = "Tid udløbet!";
-                    timerDisplay.classList.add('expired');
+                    // Immediately transition to extended timer when reaching 0
+                    startExtendedBuzzTimer();
+                    return; // Exit the interval function
                 }
             }, 1000);
         }
-
 
         function stopBuzzTimer() {
             if (gameData.buzzTimer) {
                 clearInterval(gameData.buzzTimer);
                 gameData.buzzTimer = null;
             }
+        }
+
+        function startExtendedBuzzTimer() {
+            // Stop any existing timer
+            stopBuzzTimer();
+
+            gameData.timeLeft = 20;
+            const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Keep progress bar visible for extended timer too
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar for 20-second extended timer
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)'; // Green for extended timer
+            progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
+
+            gameData.buzzTimer = setInterval(() => {
+                gameData.timeLeft--;
+                
+                // Stop at 0 and show final message
+                if (gameData.timeLeft <= 0) {
+                    clearInterval(gameData.buzzTimer);
+                    gameData.buzzTimer = null;
+                    
+                    // Hide progress bar and show timer with final message
+                    progressContainer.style.display = 'none';
+                    timerDisplay.style.display = 'block';
+                    timerDisplay.textContent = "I didnt get it";
+                    timerDisplay.classList.add('expired');
+                    timerDisplay.style.background = '#666';
+                    return; // Exit the interval function
+                }
+                
+                progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
+                
+                // Calculate progress percentage (0% at start, 100% at end)
+                const progressPercent = ((20 - gameData.timeLeft) / 20) * 100;
+                progressBar.style.width = progressPercent + '%';
+                
+                // Change color as time runs out
+                if (gameData.timeLeft <= 5) {
+                    progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
+                } else if (gameData.timeLeft <= 10) {
+                    progressBar.style.background = 'linear-gradient(45deg, #FFD700, #ff9500)';
+                } else {
+                    progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)';
+                }
+            }, 1000);
         }
 
         function updatePlayersDisplay() {
@@ -400,7 +684,15 @@
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
 
+            const timerDisplay = document.getElementById('timerDisplay');
             const buzzList = document.getElementById('buzzList');
+            
+            // If no buzzes yet, show waiting state
+            if (buzzes.length === 0) {
+                timerDisplay.textContent = "Venter på buzz...";
+                timerDisplay.classList.remove('expired');
+            }
+            
             buzzList.innerHTML = '';
 
             buzzes.forEach(buzz => {
@@ -416,6 +708,9 @@
 
         function resetBuzz() {
             stopBuzzTimer();
+            // Hide progress bar and reset timer display
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('timerDisplay').style.display = 'block';
             connection.invoke("ResetBuzz");
         }
 
@@ -423,6 +718,16 @@
             stopBuzzTimer();
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
+            
+            // Reset timer display style and hide progress bar
+            const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
+            timerDisplay.style.background = '#ff6b6b';
+            timerDisplay.style.display = 'block';
+            progressContainer.style.display = 'none';
+            
+            // Notify players to return to board view
+            connection.invoke("HostReturnToBoard");
         }
 
         function endGame() {
@@ -445,6 +750,16 @@
             };
             updatePlayersDisplay();
         });
+
+        // Prevent zoom on double-tap on iOS
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>

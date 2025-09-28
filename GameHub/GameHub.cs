@@ -79,18 +79,7 @@ public class GameHub : Hub
             board = game.Board
         });
 
-        // Start 10 sekund timer for auto-reset
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(10000); // 10 sekunder
-            if (game.IsBuzzingActive && game.CurrentBuzzes.Count == 0)
-            {
-                game.IsBuzzingActive = false;
-                await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
-                await Clients.Client(game.HostConnectionId).SendAsync("BuzzTimeExpired");
-            }
-        });
-
+        // Don't start timer here - timer will start when first player buzzes
         await Clients.Group(game.GameCode).SendAsync("BuzzingStarted");
     }
 
@@ -113,6 +102,33 @@ public class GameHub : Hub
         };
 
         game.CurrentBuzzes.Add(buzzEntry);
+
+        // Start 10 second timer only when FIRST player buzzes
+        if (game.CurrentBuzzes.Count == 1)
+        {
+            // Notify all players that the timer has started
+            await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted");
+            
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(10000); // 10 sekunder
+                if (game.IsBuzzingActive)
+                {
+                    // First timer expired - notify players about extended time
+                    await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
+                    
+                    // Start extended 20-second timer for remaining players
+                    await Task.Delay(20000); // 20 sekunder ekstra
+                    if (game.IsBuzzingActive)
+                    {
+                        // Extended timer expired - completely stop buzzing
+                        game.IsBuzzingActive = false;
+                        await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
+                        await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
+                    }
+                }
+            });
+        }
 
         // Send opdatering til værten
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
@@ -140,6 +156,16 @@ public class GameHub : Hub
 
         await Clients.Group(game.GameCode).SendAsync("BuzzReset");
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzCleared");
+    }
+
+    // New method for when host returns to board without full reset
+    public async Task HostReturnToBoard()
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
+
+        // Don't clear buzzes or change buzzing state, just notify players to return to board view
+        await Clients.GroupExcept(game.GameCode, Context.ConnectionId).SendAsync("HostReturnedToBoard");
     }
 
     public async Task UpdateScore(string playerId, int points)
