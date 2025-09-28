@@ -1,0 +1,450 @@
+﻿<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy - Vært</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .host-header {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-code {
+            font-size: 2.5em;
+            color: #FFD700;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .players-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .player-score {
+            font-size: 1.5em;
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .category-header {
+            background: #FFD700;
+            color: #000;
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+
+        .question-tile {
+            background: #000080;
+            color: #FFD700;
+            padding: 30px;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid #FFD700;
+        }
+
+            .question-tile:hover {
+                background: #0000CD;
+                transform: scale(1.05);
+            }
+
+            .question-tile.used {
+                background: #333;
+                color: #666;
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+        .buzz-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .timer-display {
+            background: #ff6b6b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+            .timer-display.expired {
+                background: #666;
+            }
+
+        .buzz-list {
+            margin: 15px 0;
+        }
+
+        .buzz-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 5px 0;
+        }
+
+        .buzz-order {
+            background: #FFD700;
+            color: #000;
+            padding: 8px 12px;
+            border-radius: 50%;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .score-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .score-input {
+            width: 80px;
+            padding: 5px;
+            border-radius: 4px;
+            border: none;
+            text-align: center;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @@media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .question-tile {
+                padding: 20px;
+                font-size: 1.4em;
+            }
+
+            .players-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="host-header">
+            <h1>🎮 Jeopardy Vært</h1>
+            <div class="game-code">Spil Kode: <span id="gameCodeDisplay">----</span></div>
+            <button class="btn btn-danger" onclick="endGame()">Afslut Spil</button>
+        </div>
+
+        <div class="players-section">
+            <h2>Spillere (<span id="playerCount">0</span>)</h2>
+            <div id="playersGrid" class="players-grid"></div>
+        </div>
+
+        <div id="gameBoard" class="game-board"></div>
+
+        <div id="buzzPanel" class="buzz-panel hidden">
+            <h2>Spillere der buzzede:</h2>
+            <div id="timerDisplay" class="timer-display">10</div>
+            <div id="buzzList" class="buzz-list"></div>
+            <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
+            <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/gameHub")
+            .build();
+
+        let gameData = {
+            gameCode: '',
+            board: null,
+            players: {},
+            buzzTimer: null,
+            timeLeft: 10
+        };
+
+        // Start connection
+        connection.start().then(function () {
+            const hostName = localStorage.getItem('hostName') || 'Vært';
+            connection.invoke("CreateGame", hostName);
+        }).catch(function (err) {
+            console.error('Connection error:', err);
+            alert('Kunne ikke oprette forbindelse til serveren');
+        });
+
+        // Event handlers
+        connection.on("GameCreated", function (data) {
+            gameData.gameCode = data.gameCode;
+            gameData.board = data.board;
+            document.getElementById('gameCodeDisplay').textContent = data.gameCode;
+            renderBoard();
+        });
+
+        connection.on("PlayersUpdated", function (players) {
+            gameData.players = {};
+            players.forEach(p => gameData.players[p.id] = p);
+            updatePlayersDisplay();
+        });
+
+        connection.on("BuzzReceived", function (data) {
+            startBuzzTimer();
+            showBuzzPanel(data.buzzes);
+        });
+
+        connection.on("BuzzCleared", function () {
+            stopBuzzTimer();
+            document.getElementById('buzzPanel').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+        });
+
+        connection.on("BuzzTimeExpired", function () {
+            stopBuzzTimer();
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.textContent = "Tid udløbet!";
+            timerDisplay.classList.add('expired');
+        });
+
+        function renderBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+
+            // Add category headers
+            gameData.board.categories.forEach(category => {
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.textContent = category.name;
+                board.appendChild(header);
+            });
+
+            // Add question tiles
+            for (let i = 0; i < 5; i++) {
+                gameData.board.categories.forEach((category, catIndex) => {
+                    const tile = document.createElement('div');
+                    const question = category.questions[i];
+                    tile.className = `question-tile ${question.isUsed ? 'used' : ''}`;
+                    tile.textContent = question.value;
+
+                    if (!question.isUsed) {
+                        tile.onclick = () => selectQuestion(catIndex, i);
+                    }
+
+                    board.appendChild(tile);
+                });
+            }
+        }
+
+        function selectQuestion(categoryIndex, questionIndex) {
+            // Fortæl serveren at et spørgsmål er valgt
+            connection.invoke("SelectQuestion", categoryIndex, questionIndex);
+
+            // Vis buzz-panelet og skjul brættet med det samme
+            document.getElementById('gameBoard').classList.add('hidden');
+            document.getElementById('buzzPanel').classList.remove('hidden');
+        }
+
+        function startBuzzTimer() {
+            // Stop evt. tidligere timer
+            stopBuzzTimer();
+
+            gameData.timeLeft = 10;
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.classList.remove('expired');
+            timerDisplay.textContent = gameData.timeLeft; // vis første tal
+
+            gameData.buzzTimer = setInterval(() => {
+                gameData.timeLeft--;
+                timerDisplay.textContent = gameData.timeLeft;
+
+                if (gameData.timeLeft < 0) {
+                    clearInterval(gameData.buzzTimer);
+                    gameData.buzzTimer = null;
+                    timerDisplay.textContent = "Tid udløbet!";
+                    timerDisplay.classList.add('expired');
+                }
+            }, 1000);
+        }
+
+
+        function stopBuzzTimer() {
+            if (gameData.buzzTimer) {
+                clearInterval(gameData.buzzTimer);
+                gameData.buzzTimer = null;
+            }
+        }
+
+        function updatePlayersDisplay() {
+            const grid = document.getElementById('playersGrid');
+            const count = document.getElementById('playerCount');
+
+            const playerList = Object.values(gameData.players);
+            count.textContent = playerList.length;
+
+            grid.innerHTML = '';
+            playerList.forEach(player => {
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.innerHTML = `
+                    <h3>${player.name}</h3>
+                    <div class="player-score">${player.score} point</div>
+                    <div class="score-controls">
+                        <input type="number" class="score-input" id="score-${player.id}" placeholder="Point">
+                        <button class="btn" onclick="updateScore('${player.id}', true)">+</button>
+                        <button class="btn btn-danger" onclick="updateScore('${player.id}', false)">-</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function updateScore(playerId, isPositive) {
+            const input = document.getElementById(`score-${playerId}`);
+            const points = parseInt(input.value) || 0;
+            if (points === 0) return;
+
+            const finalPoints = isPositive ? points : -points;
+            connection.invoke("UpdateScore", playerId, finalPoints);
+            input.value = '';
+        }
+
+        function showBuzzPanel(buzzes) {
+            document.getElementById('gameBoard').classList.add('hidden');
+            document.getElementById('buzzPanel').classList.remove('hidden');
+
+            const buzzList = document.getElementById('buzzList');
+            buzzList.innerHTML = '';
+
+            buzzes.forEach(buzz => {
+                const item = document.createElement('div');
+                item.className = 'buzz-item';
+                item.innerHTML = `
+                    <span>${buzz.playerName}</span>
+                    <span class="buzz-order">${buzz.order}</span>
+                `;
+                buzzList.appendChild(item);
+            });
+        }
+
+        function resetBuzz() {
+            stopBuzzTimer();
+            connection.invoke("ResetBuzz");
+        }
+
+        function backToBoard() {
+            stopBuzzTimer();
+            document.getElementById('buzzPanel').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+        }
+
+        function endGame() {
+            if (confirm('Er du sikker på, at du vil afslutte spillet?')) {
+                window.location.href = '/';
+            }
+        }
+
+        // Update board when questions are used
+        connection.on("QuestionSelected", function (data) {
+            gameData.board = data.board;
+            renderBoard();
+        });
+
+        connection.on("ScoreUpdated", function (data) {
+            gameData.players[data.playerId] = {
+                id: data.playerId,
+                name: data.playerName,
+                score: data.newScore
+            };
+            updatePlayersDisplay();
+        });
+    </script>
+</body>
+</html>

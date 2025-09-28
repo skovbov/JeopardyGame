@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Spil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 95%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .login-screen {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-size: 3em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+            .input-group input {
+                width: 100%;
+                padding: 15px;
+                border: none;
+                border-radius: 8px;
+                font-size: 1.1em;
+                margin: 10px 0;
+            }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            width: 250px;
+        }
+
+            .btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            }
+
+        .btn-host {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        @@media (max-width: 768px) {
+            .btn
+
+        {
+            width: 100%;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-screen">
+            <h1>🎯 Jeopardy Spil</h1>
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="Indtast dit navn" maxlength="20">
+                <input type="text" id="gameCode" placeholder="Spil kode (kun for spillere)">
+                <button class="btn" onclick="joinAsPlayer()">Tilslut som spiller</button>
+                <button class="btn btn-host" onclick="createAsHost()">Opret spil som vært</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function joinAsPlayer() {
+            const name = document.getElementById('playerName').value.trim();
+            const code = document.getElementById('gameCode').value.trim();
+
+            if (!name || !code) {
+                alert('Indtast venligst navn og spil kode');
+                return;
+            }
+
+            localStorage.setItem('playerName', name);
+            localStorage.setItem('gameCode', code);
+            window.location.href = '/Home/Play';
+        }
+
+        function createAsHost() {
+            const name = document.getElementById('playerName').value.trim();
+
+            if (!name) {
+                alert('Indtast venligst dit navn');
+                return;
+            }
+
+            localStorage.setItem('hostName', name);
+            window.location.href = '/Home/Host';
+        }
+    </script>
+</body>
+</html>

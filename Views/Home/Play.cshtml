@@ -1,0 +1,430 @@
+﻿<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy - Spiller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .player-header {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .category-header {
+            background: #FFD700;
+            color: #000;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            border-radius: 8px;
+            text-transform: uppercase;
+        }
+
+        .question-tile {
+            background: #000080;
+            color: #FFD700;
+            padding: 25px;
+            text-align: center;
+            font-size: 1.6em;
+            font-weight: bold;
+            border-radius: 8px;
+            border: 3px solid #FFD700;
+        }
+
+            .question-tile.used {
+                background: #333;
+                color: #666;
+                opacity: 0.5;
+            }
+
+        .buzz-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 4em;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            text-align: center;
+            padding: 20px;
+        }
+
+            .buzz-overlay:hover {
+                background: linear-gradient(45deg, #ff5252, #d84315);
+                transform: scale(1.02);
+            }
+
+            .buzz-overlay:active {
+                transform: scale(0.98);
+            }
+
+            .buzz-overlay.disabled {
+                background: #666;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            .buzz-overlay .question-info {
+                font-size: 0.4em;
+                margin-bottom: 20px;
+                opacity: 0.9;
+            }
+
+            .buzz-overlay .buzz-text {
+                text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+                animation: pulse 2s infinite;
+            }
+
+        @@keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .players-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .player-score {
+            font-size: 1.3em;
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+
+            .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .current-question {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            border: 2px solid #FFD700;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @@media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .question-tile {
+                padding: 15px;
+                font-size: 1.2em;
+            }
+
+            .buzz-overlay {
+                font-size: 3em;
+            }
+
+            .players-list {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="player-header">
+            <h1>🎯 Jeopardy</h1>
+            <h2>Spiller: <span id="playerName">-</span></h2>
+            <div class="status">
+                <div id="gameStatus">Venter på forbindelse...</div>
+            </div>
+        </div>
+
+        <div class="players-list" id="playersList"></div>
+
+        <div id="gameBoard" class="game-board"></div>
+
+        <div id="currentQuestion" class="current-question hidden">
+            <h2>Aktuelt spørgsmål</h2>
+            <div id="questionValue">-</div>
+        </div>
+
+        <div id="buzzOverlay" class="buzz-overlay hidden" onclick="buzz()">
+            <div class="question-info" id="overlayQuestionInfo">Spørgsmål valgt</div>
+            <div class="buzz-text">🔥 TRYK FOR AT BUZZE! 🔥</div>
+        </div>
+
+        <div class="player-header">
+            <button class="btn btn-danger" onclick="leaveGame()">Forlad Spil</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/gameHub")
+            .build();
+
+        let gameData = {
+            gameCode: '',
+            playerId: '',
+            playerName: '',
+            board: null,
+            players: {},
+            currentQuestionValue: 0
+        };
+
+        // Start connection
+        connection.start().then(function () {
+            const playerName = localStorage.getItem('playerName');
+            const gameCode = localStorage.getItem('gameCode');
+
+            if (!playerName || !gameCode) {
+                alert('Manglende spiller information');
+                window.location.href = '/';
+                return;
+            }
+
+            gameData.playerName = playerName;
+            gameData.gameCode = gameCode;
+            document.getElementById('playerName').textContent = playerName;
+
+            connection.invoke("JoinGame", gameCode, playerName);
+        }).catch(function (err) {
+            console.error('Connection error:', err);
+            alert('Kunne ikke oprette forbindelse til serveren');
+        });
+
+        // Event handlers
+        connection.on("JoinedGame", function (data) {
+            gameData.gameCode = data.gameCode;
+            gameData.playerId = data.playerId;
+            gameData.playerName = data.playerName;
+            gameData.board = data.board;
+
+            document.getElementById('gameStatus').textContent = `Tilsluttet spil: ${data.gameCode}`;
+            renderBoard();
+        });
+
+        connection.on("Error", function (message) {
+            alert(message);
+            window.location.href = '/';
+        });
+
+        connection.on("PlayersUpdated", function (players) {
+            gameData.players = {};
+            players.forEach(p => gameData.players[p.id] = p);
+            updatePlayersDisplay();
+        });
+
+        connection.on("QuestionSelected", function (data) {
+            gameData.board = data.board;
+            gameData.currentQuestionValue = data.value;
+            renderBoard();
+            showQuestion(data.value);
+            document.getElementById('gameStatus').textContent = `Spørgsmål valgt: ${data.value} point`;
+        });
+
+        connection.on("BuzzingStarted", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            const overlayInfo = document.getElementById('overlayQuestionInfo');
+
+            buzzOverlay.classList.remove('hidden', 'disabled');
+            overlayInfo.textContent = `Spørgsmål: ${gameData.currentQuestionValue} point`;
+
+            // Auto-hide efter 10 sekunder
+            setTimeout(() => {
+                if (!buzzOverlay.classList.contains('hidden')) {
+                    buzzOverlay.classList.add('disabled');
+                    document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
+                }
+            }, 10000);
+        });
+
+        connection.on("BuzzDisabled", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            buzzOverlay.classList.add('disabled');
+            document.querySelector('.buzz-text').textContent = '✅ Du har buzzet!';
+        });
+
+        connection.on("BuzzReset", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            buzzOverlay.classList.add('hidden');
+            buzzOverlay.classList.remove('disabled');
+            document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
+            document.getElementById('currentQuestion').classList.add('hidden');
+            document.getElementById('gameStatus').textContent = 'Klar til næste spørgsmål';
+        });
+
+        connection.on("BuzzTimeExpired", function () {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden')) {
+                buzzOverlay.classList.add('disabled');
+                document.querySelector('.buzz-text').textContent = '⏰ Tid udløbet!';
+            }
+        });
+
+        connection.on("ScoreUpdated", function (data) {
+            if (gameData.players[data.playerId]) {
+                gameData.players[data.playerId].score = data.newScore;
+                updatePlayersDisplay();
+            }
+        });
+
+        connection.on("GameEnded", function (reason) {
+            alert(`Spillet er afsluttet: ${reason}`);
+            window.location.href = '/';
+        });
+
+        function renderBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+
+            // Add category headers
+            gameData.board.categories.forEach(category => {
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.textContent = category.name;
+                board.appendChild(header);
+            });
+
+            // Add question tiles
+            for (let i = 0; i < 5; i++) {
+                gameData.board.categories.forEach((category, catIndex) => {
+                    const tile = document.createElement('div');
+                    const question = category.questions[i];
+                    tile.className = `question-tile ${question.isUsed ? 'used' : ''}`;
+                    tile.textContent = question.value;
+                    board.appendChild(tile);
+                });
+            }
+        }
+
+        function updatePlayersDisplay() {
+            const playersList = document.getElementById('playersList');
+            const players = Object.values(gameData.players);
+
+            playersList.innerHTML = '';
+            players.forEach(player => {
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.innerHTML = `
+                    <h4>${player.name}</h4>
+                    <div class="player-score">${player.score}</div>
+                `;
+                playersList.appendChild(card);
+            });
+        }
+
+        function showQuestion(value) {
+            const questionDiv = document.getElementById('currentQuestion');
+            const valueDiv = document.getElementById('questionValue');
+            valueDiv.textContent = `${value} point`;
+            questionDiv.classList.remove('hidden');
+        }
+
+        function buzz() {
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (buzzOverlay.classList.contains('disabled') || buzzOverlay.classList.contains('hidden')) {
+                return;
+            }
+            connection.invoke("Buzz");
+        }
+
+        function leaveGame() {
+            if (confirm('Er du sikker på, at du vil forlade spillet?')) {
+                window.location.href = '/';
+            }
+        }
+
+        // Handle connection loss
+        connection.onclose(function () {
+            alert('Forbindelse til serveren blev afbrudt');
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
