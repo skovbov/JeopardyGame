@@ -142,6 +142,16 @@ public class GameHub : Hub
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzCleared");
     }
 
+    // New method for when host returns to board without full reset
+    public async Task HostReturnToBoard()
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
+
+        // Don't clear buzzes or change buzzing state, just notify players to return to board view
+        await Clients.GroupExcept(game.GameCode, Context.ConnectionId).SendAsync("HostReturnedToBoard");
+    }
+
     public async Task UpdateScore(string playerId, int points)
     {
         var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);

@@ -2,7 +2,7 @@
 <html lang="da">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
     <title>Jeopardy - Vært</title>
     <style>
         * {
@@ -17,6 +17,7 @@
             color: white;
             min-height: 100vh;
             padding: 20px;
+            touch-action: manipulation;
         }
 
         .container {
@@ -199,18 +200,152 @@
         }
 
         @@media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
             .game-board {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
+                gap: 6px;
             }
 
             .question-tile {
-                padding: 20px;
-                font-size: 1.4em;
+                padding: 15px 8px;
+                font-size: 1.2em;
+                min-height: 50px;
+            }
+
+            .category-header {
+                padding: 8px 4px;
+                font-size: 0.8em;
             }
 
             .players-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .game-code {
+                font-size: 2em;
+                padding: 10px;
+            }
+
+            .host-header, .players-section, .buzz-panel {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+
+            .player-card {
+                padding: 10px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 0.9em;
+                margin: 3px;
+            }
+
+            .buzz-item {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+
+            .score-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .score-input {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+
+        @@media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+
+            .question-tile {
+                padding: 10px 6px;
+                font-size: 1em;
+                min-height: 45px;
+            }
+
+            .category-header {
+                padding: 6px 2px;
+                font-size: 0.7em;
+            }
+
+            .game-code {
+                font-size: 1.6em;
+                padding: 8px;
+            }
+
+            .host-header h1 {
+                font-size: 1.5em;
+            }
+
+            .players-section h2 {
+                font-size: 1.2em;
+            }
+
+            .buzz-panel h2 {
+                font-size: 1.2em;
+            }
+
+            .timer-display {
+                font-size: 1.2em;
+                padding: 8px 15px;
+            }
+
+            .btn {
+                padding: 8px 15px;
+                font-size: 0.8em;
+                margin: 2px;
+            }
+
+            .buzz-item {
+                padding: 8px;
+                font-size: 0.8em;
+            }
+
+            .buzz-order {
+                padding: 6px 10px;
+            }
+
+            .player-score {
+                font-size: 1.2em;
+            }
+        }
+
+        @@media (max-width: 896px) and (orientation: landscape) {
+            .game-board {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 3px;
+            }
+
+            .question-tile {
+                padding: 8px 4px;
+                font-size: 0.9em;
+                min-height: 40px;
+            }
+
+            .category-header {
+                padding: 4px 2px;
+                font-size: 0.6em;
+            }
+
+            .players-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             }
         }
     </style>
@@ -423,6 +558,9 @@
             stopBuzzTimer();
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
+            
+            // Notify players to return to board view
+            connection.invoke("HostReturnToBoard");
         }
 
         function endGame() {
@@ -445,6 +583,16 @@
             };
             updatePlayersDisplay();
         });
+
+        // Prevent zoom on double-tap on iOS
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>
