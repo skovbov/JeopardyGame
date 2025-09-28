@@ -486,6 +486,19 @@
             document.getElementById('gameBoard').classList.remove('hidden');
         });
 
+        connection.on("ExtendedBuzzTimeExpired", function () {
+            stopBuzzTimer();
+            // Hide progress bar and show timer with final message
+            const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            progressContainer.style.display = 'none';
+            timerDisplay.style.display = 'block';
+            timerDisplay.textContent = "I didnt get it";
+            timerDisplay.classList.add('expired');
+            timerDisplay.style.background = '#666';
+        });
+
         function renderBoard() {
             const board = document.getElementById('gameBoard');
             board.innerHTML = '';
@@ -523,7 +536,7 @@
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
             
-            // Show waiting state and hide progress bar
+            // Show waiting state - hide progress bar initially until first buzz
             const timerDisplay = document.getElementById('timerDisplay');
             const buzzList = document.getElementById('buzzList');
             const progressContainer = document.getElementById('progressContainer');
@@ -543,12 +556,26 @@
 
             gameData.timeLeft = 10;
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.classList.remove('expired');
-            timerDisplay.textContent = gameData.timeLeft; // vis første tal
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Hide regular timer display and show progress bar for first 10 seconds too
+            timerDisplay.style.display = 'none';
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar for 10-second timer
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)'; // Red for first timer
+            progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
-                timerDisplay.textContent = gameData.timeLeft;
+                progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
+                
+                // Calculate progress percentage (0% at start, 100% at end)
+                const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
+                progressBar.style.width = progressPercent + '%';
 
                 if (gameData.timeLeft <= 0) {
                     clearInterval(gameData.buzzTimer);
@@ -577,12 +604,12 @@
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
             
-            // Hide regular timer and show progress bar
-            timerDisplay.style.display = 'none';
+            // Keep progress bar visible for extended timer too
             progressContainer.style.display = 'block';
             
-            // Reset progress bar
+            // Reset progress bar for 20-second extended timer
             progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)'; // Green for extended timer
             progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
 
             gameData.buzzTimer = setInterval(() => {
@@ -596,7 +623,7 @@
                     // Hide progress bar and show timer with final message
                     progressContainer.style.display = 'none';
                     timerDisplay.style.display = 'block';
-                    timerDisplay.textContent = "Alle tider udløbet!";
+                    timerDisplay.textContent = "I didnt get it";
                     timerDisplay.classList.add('expired');
                     timerDisplay.style.background = '#666';
                     return; // Exit the interval function
@@ -735,4 +762,4 @@
         }, false);
     </script>
 </body>
-</html></html>
+</html>
