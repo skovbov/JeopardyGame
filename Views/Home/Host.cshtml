@@ -146,6 +146,55 @@
                 background: #ff9500;
             }
 
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+            position: relative;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            width: 0%;
+            border-radius: 10px;
+            transition: width 1s linear;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+
+        @@keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
         .buzz-list {
             margin: 15px 0;
         }
@@ -376,6 +425,10 @@
         <div id="buzzPanel" class="buzz-panel hidden">
             <h2>Spillere der buzzede:</h2>
             <div id="timerDisplay" class="timer-display">10</div>
+            <div id="progressContainer" class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+                <div id="progressText" class="progress-text">Extra tid: 20</div>
+            </div>
             <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
             <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
@@ -436,7 +489,7 @@
         connection.on("BuzzTimeExpired", function () {
             // Don't stop timer here anymore - extended timer will start
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.textContent = "Første periode udløbet - venter på forlænget tid...";
+            timerDisplay.textContent = "Første periode udløbet - starter extra tid...";
             timerDisplay.classList.add('expired');
         });
 
@@ -447,9 +500,15 @@
 
         connection.on("ExtendedBuzzTimeExpired", function () {
             stopBuzzTimer();
+            // Hide progress bar and show timer with final message
             const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            progressContainer.style.display = 'none';
+            timerDisplay.style.display = 'block';
             timerDisplay.textContent = "Alle tider udløbet!";
             timerDisplay.classList.add('expired');
+            timerDisplay.style.background = '#666';
         });
 
         function renderBoard() {
@@ -489,11 +548,17 @@
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
             
-            // Show waiting state
+            // Show waiting state and hide progress bar
             const timerDisplay = document.getElementById('timerDisplay');
             const buzzList = document.getElementById('buzzList');
+            const progressContainer = document.getElementById('progressContainer');
+            
+            timerDisplay.style.display = 'block';
             timerDisplay.textContent = "Venter på buzz...";
             timerDisplay.classList.remove('expired');
+            timerDisplay.style.background = '#ff6b6b';
+            
+            progressContainer.style.display = 'none';
             buzzList.innerHTML = '';
         }
 
@@ -532,17 +597,42 @@
 
             gameData.timeLeft = 20;
             const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.classList.remove('expired');
-            timerDisplay.style.background = '#ff9500'; // Orange color for extended time
-            timerDisplay.textContent = `Extra tid: ${gameData.timeLeft}`;
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Hide regular timer and show progress bar
+            timerDisplay.style.display = 'none';
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
-                timerDisplay.textContent = `Extra tid: ${gameData.timeLeft}`;
+                progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
+                
+                // Calculate progress percentage (0% at start, 100% at end)
+                const progressPercent = ((20 - gameData.timeLeft) / 20) * 100;
+                progressBar.style.width = progressPercent + '%';
+                
+                // Change color as time runs out
+                if (gameData.timeLeft <= 5) {
+                    progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
+                } else if (gameData.timeLeft <= 10) {
+                    progressBar.style.background = 'linear-gradient(45deg, #FFD700, #ff9500)';
+                } else {
+                    progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)';
+                }
 
                 if (gameData.timeLeft < 0) {
                     clearInterval(gameData.buzzTimer);
                     gameData.buzzTimer = null;
+                    
+                    // Hide progress bar and show timer with final message
+                    progressContainer.style.display = 'none';
+                    timerDisplay.style.display = 'block';
                     timerDisplay.textContent = "Alle tider udløbet!";
                     timerDisplay.classList.add('expired');
                     timerDisplay.style.background = '#666';
@@ -612,6 +702,9 @@
 
         function resetBuzz() {
             stopBuzzTimer();
+            // Hide progress bar and reset timer display
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('timerDisplay').style.display = 'block';
             connection.invoke("ResetBuzz");
         }
 
@@ -620,9 +713,12 @@
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
             
-            // Reset timer display style
+            // Reset timer display style and hide progress bar
             const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
             timerDisplay.style.background = '#ff6b6b';
+            timerDisplay.style.display = 'block';
+            progressContainer.style.display = 'none';
             
             // Notify players to return to board view
             connection.invoke("HostReturnToBoard");
