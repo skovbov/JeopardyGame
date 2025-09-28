@@ -487,14 +487,7 @@
         });
 
         connection.on("BuzzTimeExpired", function () {
-            // Don't stop timer here anymore - extended timer will start
-            const timerDisplay = document.getElementById('timerDisplay');
-            timerDisplay.textContent = "Første periode udløbet - starter extra tid...";
-            timerDisplay.classList.add('expired');
-        });
-
-        // New event handler for extended 20-second timer
-        connection.on("ExtendedBuzzTimerStarted", function () {
+            // Immediately start the extended timer visualization
             startExtendedBuzzTimer();
         });
 
@@ -578,8 +571,8 @@
                 if (gameData.timeLeft < 0) {
                     clearInterval(gameData.buzzTimer);
                     gameData.buzzTimer = null;
-                    timerDisplay.textContent = "Tid udløbet!";
-                    timerDisplay.classList.add('expired');
+                    // Don't show "Tid udløbet!" - the extended timer will take over
+                    // Just wait for the ExtendedBuzzTimerStarted event
                 }
             }, 1000);
         }
