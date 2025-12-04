@@ -1,4 +1,4 @@
-﻿using JeopardyGame.Models.GameModels;
+﻿﻿using JeopardyGame.Models.GameModels;
 using JeopardyGame.Services;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,15 +11,16 @@ public class GameHub : Hub
         _gameManager = gameManager;
     }
 
-    public async Task CreateGame(string hostName)
+    public async Task CreateGame(string hostName, bool isTeamMode = false)
     {
-        var game = _gameManager.CreateGame(Context.ConnectionId);
+        var game = _gameManager.CreateGame(Context.ConnectionId, isTeamMode);
         await Groups.AddToGroupAsync(Context.ConnectionId, game.GameCode);
 
         await Clients.Caller.SendAsync("GameCreated", new
         {
             gameCode = game.GameCode,
-            board = game.Board
+            board = game.Board,
+            isTeamMode = game.IsTeamMode
         });
     }
 
@@ -36,7 +37,8 @@ public class GameHub : Hub
         {
             Id = Guid.NewGuid().ToString(),
             Name = playerName,
-            ConnectionId = Context.ConnectionId
+            ConnectionId = Context.ConnectionId,
+            TeamId = null
         };
 
         if (_gameManager.JoinGame(gameCode, player))
@@ -49,12 +51,15 @@ public class GameHub : Hub
                 gameCode = gameCode,
                 playerId = player.Id,
                 playerName = player.Name,
-                board = game.Board
+                board = game.Board,
+                isTeamMode = game.IsTeamMode,
+                isGameStarted = game.IsGameStarted,
+                teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() })
             });
 
             // Opdater alle i spillet
             await Clients.Group(gameCode).SendAsync("PlayersUpdated",
-                game.Players.Values.Select(p => new { p.Id, p.Name, p.Score }));
+                game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId }));
         }
     }
 
@@ -70,6 +75,7 @@ public class GameHub : Hub
         game.CurrentQuestionValue = question.Value;
         game.IsBuzzingActive = true;
         game.CurrentBuzzes.Clear();
+        game.BuzzedTeamIds.Clear();
 
         await Clients.Group(game.GameCode).SendAsync("QuestionSelected", new
         {
@@ -93,6 +99,13 @@ public class GameHub : Hub
 
         // Tjek om spilleren allerede har buzzet
         if (game.CurrentBuzzes.Any(b => b.Player.Id == player.Id)) return;
+
+        // In team mode, check if the team has already buzzed
+        if (game.IsTeamMode && player.TeamId != null)
+        {
+            if (game.BuzzedTeamIds.Contains(player.TeamId)) return;
+            game.BuzzedTeamIds.Add(player.TeamId);
+        }
 
         var buzzEntry = new BuzzEntry
         {
@@ -130,20 +143,47 @@ public class GameHub : Hub
             });
         }
 
-        // Send opdatering til værten
-        await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
+        // In team mode, disable buzz for all team members
+        if (game.IsTeamMode && player.TeamId != null && game.Teams.TryGetValue(player.TeamId, out var team))
         {
-            playerName = player.Name,
-            order = buzzEntry.Order,
-            buzzes = game.CurrentBuzzes.Select(b => new
+            foreach (var teamMember in team.Players)
             {
-                playerName = b.Player.Name,
-                order = b.Order
-            }).ToList()
-        });
+                await Clients.Client(teamMember.ConnectionId).SendAsync("BuzzDisabled");
+            }
+            
+            // Send team buzz notification to host
+            await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
+            {
+                playerName = $"{team.Name} ({player.Name})",
+                order = buzzEntry.Order,
+                teamId = team.Id,
+                teamName = team.Name,
+                buzzes = game.CurrentBuzzes.Select(b => new
+                {
+                    playerName = game.IsTeamMode && b.Player.TeamId != null && game.Teams.TryGetValue(b.Player.TeamId, out var t) 
+                        ? $"{t.Name} ({b.Player.Name})" 
+                        : b.Player.Name,
+                    order = b.Order
+                }).ToList()
+            });
+        }
+        else
+        {
+            // Solo mode - send opdatering til værten
+            await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
+            {
+                playerName = player.Name,
+                order = buzzEntry.Order,
+                buzzes = game.CurrentBuzzes.Select(b => new
+                {
+                    playerName = b.Player.Name,
+                    order = b.Order
+                }).ToList()
+            });
 
-        // Deaktiver buzz knappen for denne spiller
-        await Clients.Caller.SendAsync("BuzzDisabled");
+            // Deaktiver buzz knappen for denne spiller
+            await Clients.Caller.SendAsync("BuzzDisabled");
+        }
     }
 
     public async Task ResetBuzz()
@@ -153,6 +193,7 @@ public class GameHub : Hub
 
         game.CurrentBuzzes.Clear();
         game.IsBuzzingActive = false;
+        game.BuzzedTeamIds.Clear();
 
         await Clients.Group(game.GameCode).SendAsync("BuzzReset");
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzCleared");
@@ -175,16 +216,102 @@ public class GameHub : Hub
 
         if (game.Players.TryGetValue(playerId, out var player))
         {
-            player.Score += points;
-
-            await Clients.Group(game.GameCode).SendAsync("ScoreUpdated", new
+            if (game.IsTeamMode && player.TeamId != null && game.Teams.TryGetValue(player.TeamId, out var team))
             {
-                playerId,
-                playerName = player.Name,
-                newScore = player.Score,
-                players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score })
-            });
+                // Update team score
+                team.Score += points;
+
+                await Clients.Group(game.GameCode).SendAsync("ScoreUpdated", new
+                {
+                    playerId,
+                    playerName = player.Name,
+                    teamId = team.Id,
+                    teamName = team.Name,
+                    newScore = team.Score,
+                    players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId }),
+                    teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() })
+                });
+            }
+            else
+            {
+                // Solo mode - update player score
+                player.Score += points;
+
+                await Clients.Group(game.GameCode).SendAsync("ScoreUpdated", new
+                {
+                    playerId,
+                    playerName = player.Name,
+                    newScore = player.Score,
+                    players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId })
+                });
+            }
         }
+    }
+
+    // Team management methods
+    public async Task CreateTeam(string teamName, string teamColor)
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId || !game.IsTeamMode) return;
+
+        var team = new Team
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = teamName,
+            Color = teamColor,
+            Score = 0,
+            Players = new List<Player>()
+        };
+
+        game.Teams[team.Id] = team;
+
+        await Clients.Group(game.GameCode).SendAsync("TeamCreated", new
+        {
+            teamId = team.Id,
+            teamName = team.Name,
+            teamColor = team.Color,
+            teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() })
+        });
+    }
+
+    public async Task JoinTeam(string teamId)
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || !game.IsTeamMode) return;
+
+        var player = game.Players.Values.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+        if (player == null || !game.Teams.TryGetValue(teamId, out var team)) return;
+
+        // Remove from previous team if any
+        if (player.TeamId != null && game.Teams.TryGetValue(player.TeamId, out var oldTeam))
+        {
+            oldTeam.Players.RemoveAll(p => p.Id == player.Id);
+        }
+
+        // Add to new team
+        player.TeamId = teamId;
+        team.Players.Add(player);
+
+        await Clients.Group(game.GameCode).SendAsync("TeamsUpdated", new
+        {
+            teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() }),
+            players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId })
+        });
+    }
+
+    public async Task StartGame()
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
+
+        game.IsGameStarted = true;
+
+        await Clients.Group(game.GameCode).SendAsync("GameStarted", new
+        {
+            board = game.Board,
+            teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() }),
+            players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId })
+        });
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -201,9 +328,24 @@ public class GameHub : Hub
             else
             {
                 // Spiller forlod
+                var player = game.Players.Values.FirstOrDefault(p => p.ConnectionId == Context.ConnectionId);
+                if (player != null && player.TeamId != null && game.Teams.TryGetValue(player.TeamId, out var team))
+                {
+                    team.Players.RemoveAll(p => p.Id == player.Id);
+                }
+                
                 _gameManager.RemovePlayer(Context.ConnectionId);
                 await Clients.Group(game.GameCode).SendAsync("PlayersUpdated",
-                    game.Players.Values.Select(p => new { p.Id, p.Name, p.Score }));
+                    game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId }));
+                
+                if (game.IsTeamMode)
+                {
+                    await Clients.Group(game.GameCode).SendAsync("TeamsUpdated", new
+                    {
+                        teams = game.Teams.Values.Select(t => new { t.Id, t.Name, t.Color, t.Score, PlayerIds = t.Players.Select(p => p.Id).ToList() }),
+                        players = game.Players.Values.Select(p => new { p.Id, p.Name, p.Score, p.TeamId })
+                    });
+                }
             }
         }
 

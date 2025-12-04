@@ -1,4 +1,4 @@
-﻿@{
+﻿﻿@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -90,7 +90,8 @@
                 <input type="text" id="playerName" placeholder="Indtast dit navn" maxlength="20">
                 <input type="text" id="gameCode" placeholder="Spil kode (kun for spillere)">
                 <button class="btn" onclick="joinAsPlayer()">Tilslut som spiller</button>
-                <button class="btn btn-host" onclick="createAsHost()">Opret spil som vært</button>
+                <button class="btn btn-host" onclick="createAsHost(false)">Opret solo spil som vært</button>
+                <button class="btn btn-host" onclick="createAsHost(true)" style="background: linear-gradient(45deg, #667eea, #764ba2);">Opret hold spil som vært</button>
             </div>
         </div>
     </div>
@@ -110,7 +111,7 @@
             window.location.href = '/Home/Play';
         }
 
-        function createAsHost() {
+        function createAsHost(isTeamMode) {
             const name = document.getElementById('playerName').value.trim();
 
             if (!name) {
@@ -119,6 +120,7 @@
             }
 
             localStorage.setItem('hostName', name);
+            localStorage.setItem('isTeamMode', isTeamMode ? 'true' : 'false');
             window.location.href = '/Home/Host';
         }
 

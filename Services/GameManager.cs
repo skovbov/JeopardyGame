@@ -1,4 +1,4 @@
-﻿using JeopardyGame.Models.GameModels;
+﻿﻿using JeopardyGame.Models.GameModels;
 
 namespace JeopardyGame.Services
 {
@@ -7,13 +7,15 @@ namespace JeopardyGame.Services
         private readonly Dictionary<string, Game> _games = new();
         private readonly Random _random = new();
 
-        public Game CreateGame(string hostConnectionId)
+        public Game CreateGame(string hostConnectionId, bool isTeamMode = false)
         {
             var gameCode = GenerateGameCode();
             var game = new Game
             {
                 GameCode = gameCode,
-                HostConnectionId = hostConnectionId
+                HostConnectionId = hostConnectionId,
+                IsTeamMode = isTeamMode,
+                IsGameStarted = false
             };
 
             _games[gameCode] = game;

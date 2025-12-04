@@ -1,4 +1,4 @@
-﻿@{
+﻿﻿@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -202,6 +202,47 @@
             display: none;
         }
 
+        /* Team Mode Styles */
+        .team-lobby {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .teams-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .team-card-selectable {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .team-card-selectable:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .team-card-selectable.selected {
+            background: rgba(76, 175, 80, 0.3);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .team-members-count {
+            font-size: 0.9em;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
         /* Mobile-first responsive design */
         @@media (max-width: 480px) {
             body {
@@ -332,6 +373,15 @@
             </div>
         </div>
 
+        <!-- Team Lobby (shown only in team mode before game starts) -->
+        <div id="teamLobby" class="team-lobby hidden">
+            <h2>Vælg dit hold</h2>
+            <div class="status">
+                Venter på at værten starter spillet...
+            </div>
+            <div id="teamsList" class="teams-list"></div>
+        </div>
+
         <div class="players-list" id="playersList"></div>
 
         <div id="gameBoard" class="game-board"></div>
@@ -361,8 +411,12 @@
             gameCode: '',
             playerId: '',
             playerName: '',
+            teamId: null,
             board: null,
             players: {},
+            teams: {},
+            isTeamMode: false,
+            isGameStarted: false,
             currentQuestionValue: 0
         };
 
@@ -393,9 +447,26 @@
             gameData.playerId = data.playerId;
             gameData.playerName = data.playerName;
             gameData.board = data.board;
+            gameData.isTeamMode = data.isTeamMode;
+            gameData.isGameStarted = data.isGameStarted;
 
-            document.getElementById('gameStatus').textContent = `Tilsluttet spil: ${data.gameCode}`;
-            renderBoard();
+            if (data.teams) {
+                gameData.teams = {};
+                data.teams.forEach(t => gameData.teams[t.id] = t);
+            }
+
+            if (gameData.isTeamMode && !gameData.isGameStarted) {
+                // Show team lobby
+                document.getElementById('teamLobby').classList.remove('hidden');
+                document.getElementById('gameBoard').classList.add('hidden');
+                document.getElementById('gameStatus').textContent = `Tilsluttet spil: ${data.gameCode} - Vælg dit hold`;
+                updateTeamsDisplay();
+            } else {
+                // Show game board
+                document.getElementById('teamLobby').classList.add('hidden');
+                document.getElementById('gameStatus').textContent = `Tilsluttet spil: ${data.gameCode}`;
+                renderBoard();
+            }
         });
 
         connection.on("Error", function (message) {
@@ -406,7 +477,12 @@
         connection.on("PlayersUpdated", function (players) {
             gameData.players = {};
             players.forEach(p => gameData.players[p.id] = p);
-            updatePlayersDisplay();
+            
+            if (gameData.isTeamMode && gameData.isGameStarted) {
+                updateTeamPlayersDisplay();
+            } else if (!gameData.isTeamMode) {
+                updatePlayersDisplay();
+            }
         });
 
         connection.on("QuestionSelected", function (data) {
@@ -466,7 +542,14 @@
         });
 
         connection.on("ScoreUpdated", function (data) {
-            if (gameData.players[data.playerId]) {
+            if (gameData.isTeamMode && data.teams) {
+                // Update teams and players
+                gameData.teams = {};
+                data.teams.forEach(t => gameData.teams[t.id] = t);
+                gameData.players = {};
+                data.players.forEach(p => gameData.players[p.id] = p);
+                updateTeamPlayersDisplay();
+            } else if (gameData.players[data.playerId]) {
                 gameData.players[data.playerId].score = data.newScore;
                 updatePlayersDisplay();
             }
@@ -543,6 +626,106 @@
             alert('Forbindelse til serveren blev afbrudt');
             window.location.href = '/';
         });
+
+        // Team mode event handlers
+        connection.on("TeamCreated", function (data) {
+            gameData.teams = {};
+            data.teams.forEach(t => gameData.teams[t.id] = t);
+            if (gameData.isTeamMode && !gameData.isGameStarted) {
+                updateTeamsDisplay();
+            }
+        });
+
+        connection.on("TeamsUpdated", function (data) {
+            gameData.teams = {};
+            data.teams.forEach(t => gameData.teams[t.id] = t);
+            gameData.players = {};
+            data.players.forEach(p => gameData.players[p.id] = p);
+            
+            // Update our team ID if we're in a team
+            const ourPlayer = Object.values(gameData.players).find(p => p.id === gameData.playerId);
+            if (ourPlayer) {
+                gameData.teamId = ourPlayer.teamId;
+            }
+            
+            if (gameData.isTeamMode && !gameData.isGameStarted) {
+                updateTeamsDisplay();
+            }
+        });
+
+        connection.on("GameStarted", function (data) {
+            gameData.isGameStarted = true;
+            gameData.board = data.board;
+            gameData.teams = {};
+            data.teams.forEach(t => gameData.teams[t.id] = t);
+            gameData.players = {};
+            data.players.forEach(p => gameData.players[p.id] = p);
+            
+            // Hide team lobby, show game board
+            document.getElementById('teamLobby').classList.add('hidden');
+            document.getElementById('gameBoard').classList.remove('hidden');
+            document.getElementById('gameStatus').textContent = 'Spillet er startet!';
+            
+            renderBoard();
+            updateTeamPlayersDisplay();
+        });
+
+        function updateTeamsDisplay() {
+            const teamsList = document.getElementById('teamsList');
+            teamsList.innerHTML = '';
+
+            if (Object.keys(gameData.teams).length === 0) {
+                teamsList.innerHTML = '<div style="text-align: center; padding: 20px;">Værten har ikke oprettet nogen hold endnu...</div>';
+                return;
+            }
+
+            Object.values(gameData.teams).forEach(team => {
+                const teamCard = document.createElement('div');
+                teamCard.className = 'team-card-selectable';
+                teamCard.style.borderLeftColor = team.color;
+                
+                if (gameData.teamId === team.id) {
+                    teamCard.classList.add('selected');
+                }
+                
+                const memberCount = team.playerIds ? team.playerIds.length : 0;
+                
+                teamCard.innerHTML = `
+                    <h3 style="color: ${team.color}">${team.name}</h3>
+                    <div class="team-members-count">${memberCount} medlem${memberCount !== 1 ? 'mer' : ''}</div>
+                `;
+                
+                teamCard.onclick = () => selectTeam(team.id);
+                teamsList.appendChild(teamCard);
+            });
+        }
+
+        function selectTeam(teamId) {
+            connection.invoke("JoinTeam", teamId);
+        }
+
+        function updateTeamPlayersDisplay() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '';
+
+            Object.values(gameData.teams).forEach(team => {
+                const teamPlayers = Object.values(gameData.players).filter(p => p.teamId === team.id);
+                if (teamPlayers.length === 0) return;
+                
+                const card = document.createElement('div');
+                card.className = 'player-card';
+                card.style.borderLeft = `5px solid ${team.color}`;
+                
+                const playerNames = teamPlayers.map(p => p.name).join(', ');
+                
+                card.innerHTML = `
+                    <h4 style="color: ${team.color}">${team.name}</h4>
+                    <div style="font-size: 0.8em; margin: 3px 0;">${playerNames}</div>
+                    <div class="player-score">${team.score}</div>
+                `;
+                playersList.appendChild(card);
+            });
+        }
 
         // Prevent zoom on double-tap on iOS
         let lastTouchEnd = 0;

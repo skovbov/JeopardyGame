@@ -1,4 +1,4 @@
-﻿namespace JeopardyGame.Models.GameModels
+﻿﻿namespace JeopardyGame.Models.GameModels
 {
     public class Game
     {
@@ -10,5 +10,11 @@
         public string CurrentQuestion { get; set; } = string.Empty;
         public int CurrentQuestionValue { get; set; } = 0;
         public bool IsBuzzingActive { get; set; } = false;
+        
+        // Team mode properties
+        public bool IsTeamMode { get; set; } = false;
+        public Dictionary<string, Team> Teams { get; set; } = new();
+        public bool IsGameStarted { get; set; } = false; // true when host starts the game from lobby
+        public HashSet<string> BuzzedTeamIds { get; set; } = new(); // Track which teams have buzzed
     }
 }
