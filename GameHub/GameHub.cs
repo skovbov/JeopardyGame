@@ -152,15 +152,19 @@ public class GameHub : Hub
                 }).ToList()
             });
 
-            // Notify other teams that this team is answering
+            // Notify other teams that haven't buzzed yet that this team is answering
             foreach (var otherTeam in game.Teams.Values.Where(t => t.Id != team.Id))
             {
-                foreach (var otherPlayer in otherTeam.Players)
+                // Only notify if this team hasn't buzzed yet
+                if (!game.BuzzedTeamIds.Contains(otherTeam.Id))
                 {
-                    await Clients.Client(otherPlayer.ConnectionId).SendAsync("TeamAnswering", new
+                    foreach (var otherPlayer in otherTeam.Players)
                     {
-                        teamName = team.Name
-                    });
+                        await Clients.Client(otherPlayer.ConnectionId).SendAsync("TeamAnswering", new
+                        {
+                            teamName = team.Name
+                        });
+                    }
                 }
             }
         }
@@ -253,8 +257,30 @@ public class GameHub : Hub
         var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
         if (game == null || game.HostConnectionId != Context.ConnectionId) return;
 
-        // Notify all players that they can buzz again
-        await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("TeamAnswerTimeUp");
+        // Notify only players from teams that haven't buzzed yet
+        if (game.IsTeamMode)
+        {
+            foreach (var team in game.Teams.Values)
+            {
+                // Only notify if team hasn't buzzed
+                if (!game.BuzzedTeamIds.Contains(team.Id))
+                {
+                    foreach (var teamPlayer in team.Players)
+                    {
+                        await Clients.Client(teamPlayer.ConnectionId).SendAsync("TeamAnswerTimeUp");
+                    }
+                }
+            }
+        }
+        else
+        {
+            // Solo mode - notify all players except those who have buzzed
+            var buzzedPlayerIds = game.CurrentBuzzes.Select(b => b.Player.Id).ToHashSet();
+            foreach (var player in game.Players.Values.Where(p => !buzzedPlayerIds.Contains(p.Id)))
+            {
+                await Clients.Client(player.ConnectionId).SendAsync("TeamAnswerTimeUp");
+            }
+        }
     }
 
     // Team management methods

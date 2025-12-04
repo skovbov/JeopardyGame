@@ -566,48 +566,61 @@
             renderBoard();
             showQuestion(data.value);
             document.getElementById('gameStatus').textContent = `Spørgsmål valgt: ${data.value} point`;
+            
+            // Reset buzz flag for new question
+            hasBuzzed = false;
         });
 
         connection.on("BuzzingStarted", function () {
             const buzzOverlay = document.getElementById('buzzOverlay');
             const overlayInfo = document.getElementById('overlayQuestionInfo');
 
-            buzzOverlay.classList.remove('hidden', 'disabled');
+            buzzOverlay.classList.remove('hidden');
             overlayInfo.textContent = `Spørgsmål: ${gameData.currentQuestionValue} point`;
-
-            // Don't set automatic timeout - players can buzz indefinitely until someone actually buzzes
+            
+            // Only reset if we're starting a completely new question (not if buzz is being re-enabled)
+            // Don't reset hasBuzzed here - it should only reset on BuzzReset or HostReturnedToBoard
+            
+            // Only enable buzzer if we haven't buzzed yet
+            if (!hasBuzzed) {
+                buzzOverlay.classList.remove('disabled');
+                document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
+            }
+            // If we have buzzed, keep it disabled and grey
         });
 
         connection.on("BuzzDisabled", function () {
             const buzzOverlay = document.getElementById('buzzOverlay');
             buzzOverlay.classList.add('disabled');
             document.querySelector('.buzz-text').textContent = '✅ Du har buzzet!';
+            hasBuzzed = true; // Mark that we have buzzed
         });
 
+        // Track if we have buzzed
+        let hasBuzzed = false;
+
         connection.on("TeamAnswering", function (data) {
-            // Another team is answering - lock our buzz button
+            // Another team is answering
             const buzzOverlay = document.getElementById('buzzOverlay');
-            if (!buzzOverlay.classList.contains('disabled')) {
+            
+            // If we haven't buzzed yet, show waiting message
+            if (!hasBuzzed) {
                 buzzOverlay.classList.add('disabled');
                 document.querySelector('.buzz-text').textContent = `⏳ ${data.teamName} svarer...`;
             }
+            // If we have buzzed, keep showing "Du har buzzet"
         });
 
         connection.on("TeamAnswerTimeUp", function () {
-            // Other team's time is up - enable buzz again if we haven't buzzed
+            // Other team's time is up
             const buzzOverlay = document.getElementById('buzzOverlay');
-            const player = gameData.players[gameData.playerId];
             
-            // Only enable if we haven't buzzed yet
-            if (player && (!gameData.isTeamMode || !player.teamId || 
-                !gameData.teams[player.teamId] || 
-                gameData.teams[player.teamId].playerIds.some(pid => {
-                    const p = gameData.players[pid];
-                    return p && p.id === gameData.playerId;
-                }))) {
+            // ONLY enable if we haven't buzzed yet
+            if (!hasBuzzed) {
                 buzzOverlay.classList.remove('disabled');
                 document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
             }
+            // If we have buzzed, stay grey with "Du har buzzet"
         });
 
         // Add new event handler for when buzz timer starts (after first player buzzes)
@@ -623,6 +636,7 @@
             document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
             document.getElementById('currentQuestion').classList.add('hidden');
             document.getElementById('gameStatus').textContent = 'Klar til næste spørgsmål';
+            hasBuzzed = false; // Reset flag
         });
 
         // Add new event handler for when host returns to board
@@ -633,6 +647,7 @@
             document.querySelector('.buzz-text').textContent = '🔥 TRYK FOR AT BUZZE! 🔥';
             document.getElementById('currentQuestion').classList.add('hidden');
             document.getElementById('gameStatus').textContent = 'Venter på næste spørgsmål';
+            hasBuzzed = false; // Reset flag
         });
 
         connection.on("ScoreUpdated", function (data) {
