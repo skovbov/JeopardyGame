@@ -511,27 +511,8 @@
 
         // Add new event handler for when buzz timer starts (after first player buzzes)
         connection.on("BuzzTimerStarted", function (data) {
-            // In team mode, data contains teamId and duration
-            // In solo mode, just start countdown
-            const buzzOverlay = document.getElementById('buzzOverlay');
-            
-            if (gameData.isTeamMode && data && data.teamId) {
-                // Team mode - show which team's timer is running
-                if (gameData.teamId === data.teamId) {
-                    // Our team's timer is running
-                    document.querySelector('.buzz-text').textContent = `⏱️ Dit holds tid: ${data.duration}s`;
-                } else {
-                    // Another team's timer is running
-                    document.querySelector('.buzz-text').textContent = '⏳ Andet hold svarer...';
-                }
-            } else {
-                // Solo mode - original behavior
-                setTimeout(() => {
-                    if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
-                        document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
-                    }
-                }, 10000);
-            }
+            // Timer info is shown on host side only, players just keep their buzz overlay active
+            // No need to show timer information to players
         });
 
         connection.on("BuzzReset", function () {
@@ -751,18 +732,12 @@
 
         connection.on("BuzzTimeExpired", function () {
             // Don't disable buzz overlay yet - extended timer starts
-            const buzzOverlay = document.getElementById('buzzOverlay');
-            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
-                document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
-            }
+            // Timer info is shown on host side only
         });
 
         connection.on("BuzzExtraTimeStarted", function (data) {
-            // Extra time started - 10 seconds for remaining teams to buzz
-            const buzzOverlay = document.getElementById('buzzOverlay');
-            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
-                document.querySelector('.buzz-text').textContent = `⏰ Extra tid: ${data.duration}s - BUZZ NU!`;
-            }
+            // Extra time started - timer info shown on host side only
+            // Players just keep the buzz button active
         });
 
         // Add new event handler for extended timer expiration
@@ -770,7 +745,7 @@
             const buzzOverlay = document.getElementById('buzzOverlay');
             if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
                 buzzOverlay.classList.add('disabled');
-                document.querySelector('.buzz-text').textContent = '⏰ Alle tider udløbet!';
+                document.querySelector('.buzz-text').textContent = '⏰ Tiden er udløbet!';
             }
         });
     </script>

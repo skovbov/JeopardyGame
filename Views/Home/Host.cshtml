@@ -520,7 +520,7 @@
             <div id="timerDisplay" class="timer-display">10</div>
             <div id="progressContainer" class="progress-container">
                 <div id="progressBar" class="progress-bar"></div>
-                <div id="progressText" class="progress-text">Extra tid: 10</div>
+                <div id="progressText" class="progress-text">Timer: 10s</div>
             </div>
             <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
@@ -587,9 +587,12 @@
         });
 
         connection.on("BuzzReceived", function (data) {
-            // Start timer only when first buzz is received
-            if (data.buzzes.length === 1) {
+            // In team mode, timer is started via BuzzTimerStarted event from server
+            // In solo mode, start timer on first buzz
+            if (!gameData.isTeamMode && data.buzzes.length === 1) {
                 startBuzzTimer();
+            } else if (gameData.isTeamMode) {
+                // Update buzz list but don't start timer here - wait for BuzzTimerStarted event
             }
             showBuzzPanel(data.buzzes);
         });
@@ -611,6 +614,13 @@
             timerDisplay.textContent = "I didnt get it";
             timerDisplay.classList.add('expired');
             timerDisplay.style.background = '#666';
+        });
+
+        connection.on("BuzzTimerStarted", function (data) {
+            // Team mode: Start timer for specific team and show on progress bar
+            if (gameData.isTeamMode && data && data.teamId) {
+                startTeamTimer(data.teamId, data.duration);
+            }
         });
 
         connection.on("BuzzExtraTimeStarted", function (data) {
@@ -686,11 +696,11 @@
             // Reset progress bar for 10-second timer
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)'; // Red for first timer
-            progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
+            progressText.textContent = `Timer: ${gameData.timeLeft}s`;
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
-                progressText.textContent = `Første buzz: ${gameData.timeLeft}`;
+                progressText.textContent = `Timer: ${gameData.timeLeft}s`;
                 
                 // Calculate progress percentage (0% at start, 100% at end)
                 const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
@@ -701,7 +711,7 @@
                     gameData.buzzTimer = null;
                     // Immediately transition to extended timer when reaching 0
                     startExtendedBuzzTimer();
-                    return; // Exit the interval function
+                    return;
                 }
             }, 1000);
         }
@@ -729,7 +739,7 @@
             // Reset progress bar for 10-second extended timer
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)'; // Green for extended timer
-            progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
+            progressText.textContent = `Extra tid: ${gameData.timeLeft}s`;
 
             gameData.buzzTimer = setInterval(() => {
                 gameData.timeLeft--;
@@ -748,7 +758,7 @@
                     return;
                 }
                 
-                progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
+                progressText.textContent = `Extra tid: ${gameData.timeLeft}s`;
                 
                 // Calculate progress percentage (0% at start, 100% at end)
                 const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
@@ -759,6 +769,52 @@
                     progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
                 } else {
                     progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)';
+                }
+            }, 1000);
+        }
+
+        function startTeamTimer(teamId, duration) {
+            // Stop any existing timer
+            stopBuzzTimer();
+
+            gameData.timeLeft = duration;
+            const timerDisplay = document.getElementById('timerDisplay');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Get team name for display
+            const team = gameData.teams[teamId];
+            const teamName = team ? team.name : 'Hold';
+            
+            // Hide regular timer display and show progress bar
+            timerDisplay.style.display = 'none';
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(45deg, #667eea, #764ba2)'; // Purple for team timer
+            progressText.textContent = `${teamName}: ${gameData.timeLeft}s`;
+
+            gameData.buzzTimer = setInterval(() => {
+                gameData.timeLeft--;
+                progressText.textContent = `${teamName}: ${gameData.timeLeft}s`;
+                
+                // Calculate progress percentage (0% at start, 100% at end)
+                const progressPercent = ((duration - gameData.timeLeft) / duration) * 100;
+                progressBar.style.width = progressPercent + '%';
+                
+                // Change color as time runs out
+                if (gameData.timeLeft <= 3) {
+                    progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
+                } else if (gameData.timeLeft <= 5) {
+                    progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
+                }
+
+                if (gameData.timeLeft <= 0) {
+                    clearInterval(gameData.buzzTimer);
+                    gameData.buzzTimer = null;
+                    // Server will handle what happens next (another team's timer or extra time)
                 }
             }, 1000);
         }

@@ -91,14 +91,30 @@ Nye events til real-time opdateringer:
 - Ingen ændringer i den originale spilletilstand
 - Koden håndterer begge tilstande uden konflikter
 
-## Test Scenarie
-1. Host opretter team mode spil
-2. 4 spillere joiner
-3. Host opretter 2 hold (f.eks. "Hold Rød" og "Hold Blå")
-4. 2 spillere joiner hvert hold
-5. Host starter spillet
-6. Når spørgsmål vælges og en spiller buzzer, bliver alle på deres hold grå
-7. Point gives til hele holdet
+## Test Scenarier
+
+### Scenarie 1: Alle hold buzzer hurtigt
+1. Host opretter team mode spil med 2 hold
+2. 4 spillere joiner (2 på hvert hold)
+3. Host starter spillet og vælger et spørgsmål
+4. Hold A buzzer først → deres 10 sekunders timer starter
+5. Hold B buzzer inden de 10 sekunder er gået → deres timer starter EFTER Hold A's timer
+6. Begge timere afspilles sekventielt (10 + 10 sekunder total)
+7. Ingen extra time da alle hold har buzzet
+
+### Scenarie 2: Kun ét hold buzzer under initial timer
+1. Host opretter team mode spil med 2 hold
+2. Hold A buzzer → deres 10 sekunders timer starter
+3. Hold B buzzer ikke inden de 10 sekunder
+4. Extra time på 10 sekunder starter
+5. Hvis Hold B buzzer nu → deres 10 sekunders timer starter med det samme
+6. Hvis Hold B ikke buzzer → alle buzzers bliver grå efter extra time
+
+### Scenarie 3: Solo mode (baglæns kompatibilitet)
+1. Host opretter solo mode spil
+2. Flere spillere joiner
+3. Spillet fungerer som før med 10 sekunders initial timer
+4. Extra time er nu 10 sekunder (tidligere 20 sekunder)
 
 ## Filer Ændret/Oprettet
 - **Nye filer:**
