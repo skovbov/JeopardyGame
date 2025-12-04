@@ -520,7 +520,7 @@
             <div id="timerDisplay" class="timer-display">10</div>
             <div id="progressContainer" class="progress-container">
                 <div id="progressBar" class="progress-bar"></div>
-                <div id="progressText" class="progress-text">Extra tid: 20</div>
+                <div id="progressText" class="progress-text">Extra tid: 10</div>
             </div>
             <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
@@ -611,6 +611,11 @@
             timerDisplay.textContent = "I didnt get it";
             timerDisplay.classList.add('expired');
             timerDisplay.style.background = '#666';
+        });
+
+        connection.on("BuzzExtraTimeStarted", function (data) {
+            // Extra time started (10 seconds for remaining teams to buzz)
+            startExtendedBuzzTimer();
         });
 
         function renderBoard() {
@@ -712,7 +717,7 @@
             // Stop any existing timer
             stopBuzzTimer();
 
-            gameData.timeLeft = 20;
+            gameData.timeLeft = 10;
             const timerDisplay = document.getElementById('timerDisplay');
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
@@ -721,7 +726,7 @@
             // Keep progress bar visible for extended timer too
             progressContainer.style.display = 'block';
             
-            // Reset progress bar for 20-second extended timer
+            // Reset progress bar for 10-second extended timer
             progressBar.style.width = '0%';
             progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)'; // Green for extended timer
             progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
@@ -740,20 +745,18 @@
                     timerDisplay.textContent = "I didnt get it";
                     timerDisplay.classList.add('expired');
                     timerDisplay.style.background = '#666';
-                    return; // Exit the interval function
+                    return;
                 }
                 
                 progressText.textContent = `Extra tid: ${gameData.timeLeft}`;
                 
                 // Calculate progress percentage (0% at start, 100% at end)
-                const progressPercent = ((20 - gameData.timeLeft) / 20) * 100;
+                const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
                 progressBar.style.width = progressPercent + '%';
                 
                 // Change color as time runs out
                 if (gameData.timeLeft <= 5) {
                     progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
-                } else if (gameData.timeLeft <= 10) {
-                    progressBar.style.background = 'linear-gradient(45deg, #FFD700, #ff9500)';
                 } else {
                     progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)';
                 }

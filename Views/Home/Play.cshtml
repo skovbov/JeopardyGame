@@ -510,16 +510,28 @@
         });
 
         // Add new event handler for when buzz timer starts (after first player buzzes)
-        connection.on("BuzzTimerStarted", function () {
-            // Start 10 second countdown for other players to buzz, but don't disable after 10 seconds
-            // The extended timer will handle final disabling
-            setTimeout(() => {
-                const buzzOverlay = document.getElementById('buzzOverlay');
-                if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
-                    // Don't disable here - just change text to indicate extended time
-                    document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+        connection.on("BuzzTimerStarted", function (data) {
+            // In team mode, data contains teamId and duration
+            // In solo mode, just start countdown
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            
+            if (gameData.isTeamMode && data && data.teamId) {
+                // Team mode - show which team's timer is running
+                if (gameData.teamId === data.teamId) {
+                    // Our team's timer is running
+                    document.querySelector('.buzz-text').textContent = `⏱️ Dit holds tid: ${data.duration}s`;
+                } else {
+                    // Another team's timer is running
+                    document.querySelector('.buzz-text').textContent = '⏳ Andet hold svarer...';
                 }
-            }, 10000);
+            } else {
+                // Solo mode - original behavior
+                setTimeout(() => {
+                    if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                        document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+                    }
+                }, 10000);
+            }
         });
 
         connection.on("BuzzReset", function () {
@@ -742,6 +754,14 @@
             const buzzOverlay = document.getElementById('buzzOverlay');
             if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
                 document.querySelector('.buzz-text').textContent = '⏰ Extra tid!';
+            }
+        });
+
+        connection.on("BuzzExtraTimeStarted", function (data) {
+            // Extra time started - 10 seconds for remaining teams to buzz
+            const buzzOverlay = document.getElementById('buzzOverlay');
+            if (!buzzOverlay.classList.contains('hidden') && !buzzOverlay.classList.contains('disabled')) {
+                document.querySelector('.buzz-text').textContent = `⏰ Extra tid: ${data.duration}s - BUZZ NU!`;
             }
         });
 

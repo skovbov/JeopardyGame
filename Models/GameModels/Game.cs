@@ -16,5 +16,7 @@
         public Dictionary<string, Team> Teams { get; set; } = new();
         public bool IsGameStarted { get; set; } = false; // true when host starts the game from lobby
         public HashSet<string> BuzzedTeamIds { get; set; } = new(); // Track which teams have buzzed
+        public bool IsTimerRunning { get; set; } = false; // Track if a team timer is currently running
+        public bool IsExtraTimeActive { get; set; } = false; // Track if extra time is active
     }
 }

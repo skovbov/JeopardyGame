@@ -76,6 +76,8 @@ public class GameHub : Hub
         game.IsBuzzingActive = true;
         game.CurrentBuzzes.Clear();
         game.BuzzedTeamIds.Clear();
+        game.IsTimerRunning = false;
+        game.IsExtraTimeActive = false;
 
         await Clients.Group(game.GameCode).SendAsync("QuestionSelected", new
         {
@@ -116,33 +118,6 @@ public class GameHub : Hub
 
         game.CurrentBuzzes.Add(buzzEntry);
 
-        // Start 10 second timer only when FIRST player buzzes
-        if (game.CurrentBuzzes.Count == 1)
-        {
-            // Notify all players that the timer has started
-            await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted");
-            
-            _ = Task.Run(async () =>
-            {
-                await Task.Delay(10000); // 10 sekunder
-                if (game.IsBuzzingActive)
-                {
-                    // First timer expired - notify players about extended time
-                    await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
-                    
-                    // Start extended 20-second timer for remaining players
-                    await Task.Delay(20000); // 20 sekunder ekstra
-                    if (game.IsBuzzingActive)
-                    {
-                        // Extended timer expired - completely stop buzzing
-                        game.IsBuzzingActive = false;
-                        await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
-                        await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
-                    }
-                }
-            });
-        }
-
         // In team mode, disable buzz for all team members
         if (game.IsTeamMode && player.TeamId != null && game.Teams.TryGetValue(player.TeamId, out var team))
         {
@@ -166,9 +141,54 @@ public class GameHub : Hub
                     order = b.Order
                 }).ToList()
             });
+
+            // Handle timer logic for team mode
+            if (game.CurrentBuzzes.Count == 1)
+            {
+                // First team buzzed - start their 10 second timer
+                game.IsTimerRunning = true;
+                game.IsExtraTimeActive = false;
+                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
+                
+                _ = Task.Run(async () => await ProcessTeamTimers(game));
+            }
+            else if (!game.IsTimerRunning && game.IsExtraTimeActive)
+            {
+                // Team buzzed during extra time - start their 10 second timer immediately
+                game.IsTimerRunning = true;
+                game.IsExtraTimeActive = false;
+                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
+                
+                _ = Task.Run(async () => await ProcessTeamTimers(game));
+            }
+            // If timer is running, the team's timer will start after current timer expires
         }
         else
         {
+            // Solo mode - original logic with 10 second extra time
+            if (game.CurrentBuzzes.Count == 1)
+            {
+                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted");
+                
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(10000);
+                    if (game.IsBuzzingActive)
+                    {
+                        await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
+                        
+                        // Changed to 10 seconds extra time
+                        await Task.Delay(10000);
+                        if (game.IsBuzzingActive)
+                        {
+                            game.IsBuzzingActive = false;
+                            await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
+                            await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
+                        }
+                    }
+                });
+            }
+
             // Solo mode - send opdatering til værten
             await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
             {
@@ -181,8 +201,93 @@ public class GameHub : Hub
                 }).ToList()
             });
 
-            // Deaktiver buzz knappen for denne spiller
             await Clients.Caller.SendAsync("BuzzDisabled");
+        }
+    }
+
+    private async Task ProcessTeamTimers(Game game)
+    {
+        while (game.IsBuzzingActive && game.IsTeamMode)
+        {
+            // Check if all teams have buzzed
+            if (game.BuzzedTeamIds.Count >= game.Teams.Count)
+            {
+                // All teams have buzzed - process remaining timers sequentially without extra time
+                game.IsExtraTimeActive = false;
+                
+                // Wait for current timer if running
+                if (game.IsTimerRunning)
+                {
+                    await Task.Delay(10000);
+                }
+                
+                // Check if there are more teams that buzzed while timer was running
+                int processedBuzzes = 1;
+                while (processedBuzzes < game.CurrentBuzzes.Count && game.IsBuzzingActive)
+                {
+                    var nextBuzz = game.CurrentBuzzes[processedBuzzes];
+                    if (game.Teams.TryGetValue(nextBuzz.Player.TeamId!, out var nextTeam))
+                    {
+                        await Clients.GroupExcept(game.GameCode, game.HostConnectionId)
+                            .SendAsync("BuzzTimerStarted", new { teamId = nextTeam.Id, duration = 10 });
+                        await Task.Delay(10000);
+                    }
+                    processedBuzzes++;
+                }
+                
+                game.IsTimerRunning = false;
+                return; // All teams processed
+            }
+
+            // Wait for current timer (10 seconds)
+            await Task.Delay(10000);
+            
+            if (!game.IsBuzzingActive) return;
+
+            var currentBuzzCount = game.CurrentBuzzes.Count;
+            
+            // Check if another team buzzed during the timer
+            if (currentBuzzCount > 1 && game.BuzzedTeamIds.Count > 1)
+            {
+                // Another team buzzed - start their timer
+                var nextBuzz = game.CurrentBuzzes[currentBuzzCount - 1];
+                if (nextBuzz.Player.TeamId != null && game.Teams.TryGetValue(nextBuzz.Player.TeamId, out var nextTeam))
+                {
+                    await Clients.GroupExcept(game.GameCode, game.HostConnectionId)
+                        .SendAsync("BuzzTimerStarted", new { teamId = nextTeam.Id, duration = 10 });
+                    continue; // Continue loop to process next timer
+                }
+            }
+
+            // No new buzzes - start extra time if not all teams have buzzed
+            if (game.BuzzedTeamIds.Count < game.Teams.Count)
+            {
+                game.IsTimerRunning = false;
+                game.IsExtraTimeActive = true;
+                await Clients.Group(game.GameCode).SendAsync("BuzzExtraTimeStarted", new { duration = 10 });
+                
+                await Task.Delay(10000);
+                
+                if (!game.IsBuzzingActive) return;
+                
+                // Check if team buzzed during extra time
+                if (game.CurrentBuzzes.Count > currentBuzzCount)
+                {
+                    // Team buzzed during extra time - their timer was already started in Buzz method
+                    continue;
+                }
+                
+                // No one buzzed during extra time - end buzzing
+                game.IsBuzzingActive = false;
+                game.IsTimerRunning = false;
+                game.IsExtraTimeActive = false;
+                await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
+                await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
+                return;
+            }
+            
+            game.IsTimerRunning = false;
+            return;
         }
     }
 
@@ -194,6 +299,8 @@ public class GameHub : Hub
         game.CurrentBuzzes.Clear();
         game.IsBuzzingActive = false;
         game.BuzzedTeamIds.Clear();
+        game.IsTimerRunning = false;
+        game.IsExtraTimeActive = false;
 
         await Clients.Group(game.GameCode).SendAsync("BuzzReset");
         await Clients.Client(game.HostConnectionId).SendAsync("BuzzCleared");
