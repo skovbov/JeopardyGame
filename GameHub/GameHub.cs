@@ -152,56 +152,11 @@ public class GameHub : Hub
                 }).ToList()
             });
 
-            // Handle timer logic for team mode
-            if (game.CurrentBuzzes.Count == 1)
-            {
-                // First team buzzed - stop music and start their 10 second timer
-                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
-                game.IsTimerRunning = true;
-                game.IsExtraTimeActive = false;
-                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
-                
-                _ = Task.Run(async () => await ProcessTeamTimers(game));
-            }
-            else if (!game.IsTimerRunning && game.IsExtraTimeActive)
-            {
-                // Team buzzed during extra time - stop music and start their 10 second timer immediately
-                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
-                game.IsTimerRunning = true;
-                game.IsExtraTimeActive = false;
-                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
-                
-                _ = Task.Run(async () => await ProcessTeamTimers(game));
-            }
-            // If timer is running, the team's timer will start after current timer expires
+            // No automatic timer logic - host controls everything manually
         }
         else
         {
-            // Solo mode - original logic with 10 second extra time
-            if (game.CurrentBuzzes.Count == 1)
-            {
-                await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted");
-                
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(10000);
-                    if (game.IsBuzzingActive)
-                    {
-                        await Clients.Group(game.GameCode).SendAsync("BuzzTimeExpired");
-                        
-                        // Changed to 10 seconds extra time
-                        await Task.Delay(10000);
-                        if (game.IsBuzzingActive)
-                        {
-                            game.IsBuzzingActive = false;
-                            await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
-                            await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
-                        }
-                    }
-                });
-            }
-
-            // Solo mode - send opdatering til værten
+            // Solo mode - simple buzz notification, no timer logic
             await Clients.Client(game.HostConnectionId).SendAsync("BuzzReceived", new
             {
                 playerName = player.Name,
@@ -217,101 +172,7 @@ public class GameHub : Hub
         }
     }
 
-    private async Task ProcessTeamTimers(Game game)
-    {
-        while (game.IsBuzzingActive && game.IsTeamMode)
-        {
-            // Check if all teams have buzzed
-            if (game.BuzzedTeamIds.Count >= game.Teams.Count)
-            {
-                // All teams have buzzed - process remaining timers sequentially without extra time
-                game.IsExtraTimeActive = false;
-                
-                // Wait for current timer if running
-                if (game.IsTimerRunning)
-                {
-                    await Task.Delay(10000);
-                    // Resume music after timer
-                    await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
-                }
-                
-                // Check if there are more teams that buzzed while timer was running
-                int processedBuzzes = 1;
-                while (processedBuzzes < game.CurrentBuzzes.Count && game.IsBuzzingActive)
-                {
-                    var nextBuzz = game.CurrentBuzzes[processedBuzzes];
-                    if (game.Teams.TryGetValue(nextBuzz.Player.TeamId!, out var nextTeam))
-                    {
-                        // Stop music for next team's timer
-                        await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
-                        await Clients.GroupExcept(game.GameCode, game.HostConnectionId)
-                            .SendAsync("BuzzTimerStarted", new { teamId = nextTeam.Id, duration = 10 });
-                        await Task.Delay(10000);
-                        // Resume music after timer
-                        await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
-                    }
-                    processedBuzzes++;
-                }
-                
-                game.IsTimerRunning = false;
-                return; // All teams processed
-            }
-
-            // Wait for current timer (10 seconds)
-            await Task.Delay(10000);
-            
-            if (!game.IsBuzzingActive) return;
-
-            var currentBuzzCount = game.CurrentBuzzes.Count;
-            
-            // Resume music after timer expires
-            await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
-            
-            // Check if another team buzzed during the timer
-            if (currentBuzzCount > 1 && game.BuzzedTeamIds.Count > 1)
-            {
-                // Another team buzzed - stop music and start their timer
-                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
-                var nextBuzz = game.CurrentBuzzes[currentBuzzCount - 1];
-                if (nextBuzz.Player.TeamId != null && game.Teams.TryGetValue(nextBuzz.Player.TeamId, out var nextTeam))
-                {
-                    await Clients.GroupExcept(game.GameCode, game.HostConnectionId)
-                        .SendAsync("BuzzTimerStarted", new { teamId = nextTeam.Id, duration = 10 });
-                    continue; // Continue loop to process next timer
-                }
-            }
-
-            // No new buzzes - start extra time if not all teams have buzzed
-            if (game.BuzzedTeamIds.Count < game.Teams.Count)
-            {
-                game.IsTimerRunning = false;
-                game.IsExtraTimeActive = true;
-                await Clients.Group(game.GameCode).SendAsync("BuzzExtraTimeStarted", new { duration = 10 });
-                
-                await Task.Delay(10000);
-                
-                if (!game.IsBuzzingActive) return;
-                
-                // Check if team buzzed during extra time
-                if (game.CurrentBuzzes.Count > currentBuzzCount)
-                {
-                    // Team buzzed during extra time - their timer was already started in Buzz method
-                    continue;
-                }
-                
-                // No one buzzed during extra time - end buzzing
-                game.IsBuzzingActive = false;
-                game.IsTimerRunning = false;
-                game.IsExtraTimeActive = false;
-                await Clients.Group(game.GameCode).SendAsync("ExtendedBuzzTimeExpired");
-                await Clients.Client(game.HostConnectionId).SendAsync("ExtendedBuzzTimeExpired");
-                return;
-            }
-            
-            game.IsTimerRunning = false;
-            return;
-        }
-    }
+    // ProcessTeamTimers removed - host now controls everything manually
 
     public async Task ResetBuzz()
     {
@@ -375,14 +236,6 @@ public class GameHub : Hub
                 });
             }
         }
-    }
-
-    public async Task StopMusic()
-    {
-        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
-        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
-
-        await Clients.Caller.SendAsync("MusicStopped");
     }
 
     // Team management methods

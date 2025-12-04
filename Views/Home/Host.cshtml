@@ -126,73 +126,37 @@
             backdrop-filter: blur(10px);
         }
 
-        .timer-display {
-            background: #ff6b6b;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 50px;
-            font-size: 1.5em;
-            font-weight: bold;
-            margin: 10px 0;
+        /* Simple Countdown Timer */
+        .countdown-timer {
+            background: rgba(255, 107, 107, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
             text-align: center;
-            transition: background-color 0.3s ease;
+            border: 3px solid #ff6b6b;
         }
 
-            .timer-display.expired {
-                background: #666;
-            }
-
-            .timer-display.extended {
-                background: #ff9500;
-            }
-
-        .progress-container {
-            width: 100%;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            margin: 10px 0;
-            overflow: hidden;
-            position: relative;
-            display: none;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(45deg, #4CAF50, #8BC34A);
-            width: 0%;
-            border-radius: 10px;
-            transition: width 1s linear;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.9em;
+        .countdown-display {
+            font-size: 4em;
             font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            z-index: 1;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin: 10px 0;
         }
 
-        @@keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        .countdown-display.warning {
+            color: #ff9500;
+            animation: pulse 0.5s infinite;
+        }
+
+        .countdown-display.critical {
+            color: #ff0000;
+            animation: pulse 0.3s infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
         }
 
         .buzz-list {
@@ -554,16 +518,18 @@
             <!-- Music Controls -->
             <div id="musicControls" class="music-controls hidden">
                 <h3>🎵 Musik Kontrol</h3>
+                <button class="btn btn-music" onclick="startMusicManually()">▶️ Start Musik</button>
                 <button class="btn btn-music" onclick="stopMusicManually()">⏹️ Stop Musik</button>
                 <button class="btn btn-answer" onclick="revealAnswer()">💡 Vis Svar</button>
                 <div id="answerDisplay" class="answer-display hidden"></div>
             </div>
             
-            <div id="timerDisplay" class="timer-display">10</div>
-            <div id="progressContainer" class="progress-container">
-                <div id="progressBar" class="progress-bar"></div>
-                <div id="progressText" class="progress-text">Timer: 10s</div>
+            <!-- Simple countdown timer -->
+            <div id="countdownTimer" class="countdown-timer hidden">
+                <h2>⏱️ Timer</h2>
+                <div id="countdownDisplay" class="countdown-display">10</div>
             </div>
+            
             <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
             <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
@@ -586,7 +552,7 @@
             teams: {},
             isTeamMode: false,
             isGameStarted: false,
-            buzzTimer: null,
+            countdownTimer: null,
             timeLeft: 10,
             currentMusicFile: null,
             currentAnswer: null,
@@ -638,13 +604,8 @@
         });
 
         connection.on("BuzzReceived", function (data) {
-            // In team mode, timer is started via BuzzTimerStarted event from server
-            // In solo mode, start timer on first buzz
-            if (!gameData.isTeamMode && data.buzzes.length === 1) {
-                startBuzzTimer();
-            } else if (gameData.isTeamMode) {
-                // Update buzz list but don't start timer here - wait for BuzzTimerStarted event
-            }
+            // Start simple countdown timer when team/player buzzes
+            startCountdown();
             showBuzzPanel(data.buzzes);
         });
 
@@ -667,17 +628,7 @@
             timerDisplay.style.background = '#666';
         });
 
-        connection.on("BuzzTimerStarted", function (data) {
-            // Team mode: Start timer for specific team and show on progress bar
-            if (gameData.isTeamMode && data && data.teamId) {
-                startTeamTimer(data.teamId, data.duration);
-            }
-        });
-
-        connection.on("BuzzExtraTimeStarted", function (data) {
-            // Extra time started (10 seconds for remaining teams to buzz)
-            startExtendedBuzzTimer();
-        });
+        // Removed complex timer event handlers - using simple countdown now
 
         // Music event handlers
         connection.on("PlayMusic", function (data) {
@@ -695,23 +646,7 @@
             }
         });
 
-        connection.on("StopMusic", function () {
-            if (gameData.musicPlayer) {
-                gameData.musicPlayer.pause();
-            }
-        });
-
-        connection.on("ResumeMusic", function () {
-            if (gameData.musicPlayer && gameData.currentMusicFile) {
-                gameData.musicPlayer.play().catch(err => console.error('Music resume error:', err));
-            }
-        });
-
-        connection.on("MusicStopped", function () {
-            if (gameData.musicPlayer) {
-                gameData.musicPlayer.pause();
-            }
-        });
+        // Music is now controlled manually by host - no automatic stop/resume
 
         function renderBoard() {
             const board = document.getElementById('gameBoard');
@@ -750,159 +685,12 @@
             document.getElementById('gameBoard').classList.add('hidden');
             document.getElementById('buzzPanel').classList.remove('hidden');
             
-            // Show waiting state - hide progress bar initially until first buzz
-            const timerDisplay = document.getElementById('timerDisplay');
-            const buzzList = document.getElementById('buzzList');
-            const progressContainer = document.getElementById('progressContainer');
-            
-            timerDisplay.style.display = 'block';
-            timerDisplay.textContent = "Venter på buzz...";
-            timerDisplay.classList.remove('expired');
-            timerDisplay.style.background = '#ff6b6b';
-            
-            progressContainer.style.display = 'none';
-            buzzList.innerHTML = '';
+            // Hide countdown timer initially
+            document.getElementById('countdownTimer').classList.add('hidden');
+            document.getElementById('buzzList').innerHTML = '';
         }
 
-        function startBuzzTimer() {
-            // Stop evt. tidligere timer
-            stopBuzzTimer();
-
-            gameData.timeLeft = 10;
-            const timerDisplay = document.getElementById('timerDisplay');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
-            // Hide regular timer display and show progress bar for first 10 seconds too
-            timerDisplay.style.display = 'none';
-            progressContainer.style.display = 'block';
-            
-            // Reset progress bar for 10-second timer
-            progressBar.style.width = '0%';
-            progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)'; // Red for first timer
-            progressText.textContent = `Timer: ${gameData.timeLeft}s`;
-
-            gameData.buzzTimer = setInterval(() => {
-                gameData.timeLeft--;
-                progressText.textContent = `Timer: ${gameData.timeLeft}s`;
-                
-                // Calculate progress percentage (0% at start, 100% at end)
-                const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
-                progressBar.style.width = progressPercent + '%';
-
-                if (gameData.timeLeft <= 0) {
-                    clearInterval(gameData.buzzTimer);
-                    gameData.buzzTimer = null;
-                    // Immediately transition to extended timer when reaching 0
-                    startExtendedBuzzTimer();
-                    return;
-                }
-            }, 1000);
-        }
-
-        function stopBuzzTimer() {
-            if (gameData.buzzTimer) {
-                clearInterval(gameData.buzzTimer);
-                gameData.buzzTimer = null;
-            }
-        }
-
-        function startExtendedBuzzTimer() {
-            // Stop any existing timer
-            stopBuzzTimer();
-
-            gameData.timeLeft = 10;
-            const timerDisplay = document.getElementById('timerDisplay');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
-            // Keep progress bar visible for extended timer too
-            progressContainer.style.display = 'block';
-            
-            // Reset progress bar for 10-second extended timer
-            progressBar.style.width = '0%';
-            progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)'; // Green for extended timer
-            progressText.textContent = `Extra tid: ${gameData.timeLeft}s`;
-
-            gameData.buzzTimer = setInterval(() => {
-                gameData.timeLeft--;
-                
-                // Stop at 0 and show final message
-                if (gameData.timeLeft <= 0) {
-                    clearInterval(gameData.buzzTimer);
-                    gameData.buzzTimer = null;
-                    
-                    // Hide progress bar and show timer with final message
-                    progressContainer.style.display = 'none';
-                    timerDisplay.style.display = 'block';
-                    timerDisplay.textContent = "I didnt get it";
-                    timerDisplay.classList.add('expired');
-                    timerDisplay.style.background = '#666';
-                    return;
-                }
-                
-                progressText.textContent = `Extra tid: ${gameData.timeLeft}s`;
-                
-                // Calculate progress percentage (0% at start, 100% at end)
-                const progressPercent = ((10 - gameData.timeLeft) / 10) * 100;
-                progressBar.style.width = progressPercent + '%';
-                
-                // Change color as time runs out
-                if (gameData.timeLeft <= 5) {
-                    progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
-                } else {
-                    progressBar.style.background = 'linear-gradient(45deg, #4CAF50, #8BC34A)';
-                }
-            }, 1000);
-        }
-
-        function startTeamTimer(teamId, duration) {
-            // Stop any existing timer
-            stopBuzzTimer();
-
-            gameData.timeLeft = duration;
-            const timerDisplay = document.getElementById('timerDisplay');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
-            // Get team name for display
-            const team = gameData.teams[teamId];
-            const teamName = team ? team.name : 'Hold';
-            
-            // Hide regular timer display and show progress bar
-            timerDisplay.style.display = 'none';
-            progressContainer.style.display = 'block';
-            
-            // Reset progress bar
-            progressBar.style.width = '0%';
-            progressBar.style.background = 'linear-gradient(45deg, #667eea, #764ba2)'; // Purple for team timer
-            progressText.textContent = `${teamName}: ${gameData.timeLeft}s`;
-
-            gameData.buzzTimer = setInterval(() => {
-                gameData.timeLeft--;
-                progressText.textContent = `${teamName}: ${gameData.timeLeft}s`;
-                
-                // Calculate progress percentage (0% at start, 100% at end)
-                const progressPercent = ((duration - gameData.timeLeft) / duration) * 100;
-                progressBar.style.width = progressPercent + '%';
-                
-                // Change color as time runs out
-                if (gameData.timeLeft <= 3) {
-                    progressBar.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
-                } else if (gameData.timeLeft <= 5) {
-                    progressBar.style.background = 'linear-gradient(45deg, #ff9500, #ff6b6b)';
-                }
-
-                if (gameData.timeLeft <= 0) {
-                    clearInterval(gameData.buzzTimer);
-                    gameData.buzzTimer = null;
-                    // Server will handle what happens next (another team's timer or extra time)
-                }
-            }, 1000);
-        }
+        // Old complex timer functions removed - using simple countdown now
 
         function updatePlayersDisplay() {
             const grid = document.getElementById('playersGrid');
@@ -965,47 +753,39 @@
         }
 
         function resetBuzz() {
-            stopBuzzTimer();
+            stopCountdown();
             // Stop music
             if (gameData.musicPlayer) {
                 gameData.musicPlayer.pause();
                 gameData.musicPlayer.currentTime = 0;
             }
-            // Hide music controls
+            // Hide music controls and countdown
             document.getElementById('musicControls').classList.add('hidden');
             document.getElementById('answerDisplay').classList.add('hidden');
+            document.getElementById('countdownTimer').classList.add('hidden');
             gameData.currentMusicFile = null;
             gameData.currentAnswer = null;
             
-            // Hide progress bar and reset timer display
-            document.getElementById('progressContainer').style.display = 'none';
-            document.getElementById('timerDisplay').style.display = 'block';
             connection.invoke("ResetBuzz");
         }
 
         function backToBoard() {
-            stopBuzzTimer();
+            stopCountdown();
             
             // Stop music
             if (gameData.musicPlayer) {
                 gameData.musicPlayer.pause();
                 gameData.musicPlayer.currentTime = 0;
             }
-            // Hide music controls
+            // Hide music controls and countdown
             document.getElementById('musicControls').classList.add('hidden');
             document.getElementById('answerDisplay').classList.add('hidden');
+            document.getElementById('countdownTimer').classList.add('hidden');
             gameData.currentMusicFile = null;
             gameData.currentAnswer = null;
             
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
-            
-            // Reset timer display style and hide progress bar
-            const timerDisplay = document.getElementById('timerDisplay');
-            const progressContainer = document.getElementById('progressContainer');
-            timerDisplay.style.background = '#ff6b6b';
-            timerDisplay.style.display = 'block';
-            progressContainer.style.display = 'none';
             
             // Notify players to return to board view
             connection.invoke("HostReturnToBoard");
@@ -1043,11 +823,16 @@
         });
 
         // Music control functions
+        function startMusicManually() {
+            if (gameData.musicPlayer && gameData.currentMusicFile) {
+                gameData.musicPlayer.play().catch(err => console.error('Music play error:', err));
+            }
+        }
+
         function stopMusicManually() {
             if (gameData.musicPlayer) {
                 gameData.musicPlayer.pause();
             }
-            connection.invoke("StopMusic");
         }
 
         function revealAnswer() {
@@ -1058,6 +843,54 @@
             } else {
                 answerDisplay.textContent = '🎵 Ingen svar tilgængeligt';
                 answerDisplay.classList.remove('hidden');
+            }
+        }
+
+        // Simple countdown timer functions
+        function startCountdown() {
+            // Stop music when countdown starts
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+            }
+
+            // Stop any existing countdown
+            stopCountdown();
+
+            // Show countdown timer
+            document.getElementById('countdownTimer').classList.remove('hidden');
+            
+            // Reset to 10 seconds
+            gameData.timeLeft = 10;
+            const countdownDisplay = document.getElementById('countdownDisplay');
+            countdownDisplay.textContent = gameData.timeLeft;
+            countdownDisplay.classList.remove('warning', 'critical');
+
+            // Start countdown
+            gameData.countdownTimer = setInterval(() => {
+                gameData.timeLeft--;
+                countdownDisplay.textContent = gameData.timeLeft;
+
+                // Visual warnings
+                if (gameData.timeLeft <= 3) {
+                    countdownDisplay.classList.add('critical');
+                    countdownDisplay.classList.remove('warning');
+                } else if (gameData.timeLeft <= 5) {
+                    countdownDisplay.classList.add('warning');
+                    countdownDisplay.classList.remove('critical');
+                }
+
+                // Stop at 0
+                if (gameData.timeLeft <= 0) {
+                    stopCountdown();
+                    countdownDisplay.textContent = "STOP!";
+                }
+            }, 1000);
+        }
+
+        function stopCountdown() {
+            if (gameData.countdownTimer) {
+                clearInterval(gameData.countdownTimer);
+                gameData.countdownTimer = null;
             }
         }
 
