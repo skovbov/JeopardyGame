@@ -152,7 +152,17 @@ public class GameHub : Hub
                 }).ToList()
             });
 
-            // No automatic timer logic - host controls everything manually
+            // Notify other teams that this team is answering
+            foreach (var otherTeam in game.Teams.Values.Where(t => t.Id != team.Id))
+            {
+                foreach (var otherPlayer in otherTeam.Players)
+                {
+                    await Clients.Client(otherPlayer.ConnectionId).SendAsync("TeamAnswering", new
+                    {
+                        teamName = team.Name
+                    });
+                }
+            }
         }
         else
         {
@@ -236,6 +246,15 @@ public class GameHub : Hub
                 });
             }
         }
+    }
+
+    public async Task NotifyAnswerTimeUp()
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
+
+        // Notify all players that they can buzz again
+        await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("TeamAnswerTimeUp");
     }
 
     // Team management methods

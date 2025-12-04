@@ -15,83 +15,283 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Animated background circles */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .bg-circle:nth-child(1) {
+            width: 300px;
+            height: 300px;
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .bg-circle:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            bottom: 15%;
+            right: 15%;
+            animation-delay: 5s;
+        }
+
+        .bg-circle:nth-child(3) {
+            width: 150px;
+            height: 150px;
+            top: 60%;
+            left: 70%;
+            animation-delay: 10s;
+        }
+
+        @@keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(0px); }
+            33% { transform: translateY(-30px) translateX(20px); }
+            66% { transform: translateY(20px) translateX(-20px); }
         }
 
         .container {
-            max-width: 600px;
+            max-width: 900px;
             width: 95%;
             margin: 0 auto;
             padding: 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .login-screen {
             text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 40px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         h1 {
-            margin-bottom: 30px;
-            font-size: 3em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 15px;
+            font-size: 3.5em;
+            font-weight: 700;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            font-weight: 300;
         }
 
         .input-group {
-            margin: 20px 0;
+            margin: 30px 0;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
 
-            .input-group input {
-                width: 100%;
-                padding: 15px;
-                border: none;
-                border-radius: 8px;
-                font-size: 1.1em;
-                margin: 10px 0;
-            }
+        .input-group input {
+            width: 100%;
+            padding: 18px 25px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 1.1em;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #FFD700;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .mode-selection {
+            margin: 30px 0;
+        }
+
+        .mode-selection h2 {
+            font-size: 1.5em;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        .mode-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .mode-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 35px 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            border: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: #FFD700;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .mode-card:hover::before {
+            opacity: 1;
+        }
+
+        .mode-card:active {
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        .mode-icon {
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            display: block;
+            animation: bounce 2s infinite;
+        }
+
+        @@keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .mode-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .mode-description {
+            font-size: 0.95em;
+            opacity: 0.85;
+            line-height: 1.5;
+        }
+
+        .join-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid rgba(255, 255, 255, 0.2);
+        }
 
         .btn {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #FFD700, #FFA500);
             border: none;
-            color: white;
-            padding: 15px 30px;
-            font-size: 1.1em;
-            border-radius: 8px;
+            color: #000;
+            padding: 18px 40px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
             margin: 10px;
-            width: 250px;
+            width: 100%;
+            max-width: 300px;
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
         }
 
-            .btn:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        @@media (max-width: 768px) {
+            h1 {
+                font-size: 2.5em;
             }
 
-        .btn-host {
-            background: linear-gradient(45deg, #f093fb, #f5576c);
+            .mode-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .bg-circle {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Animated background -->
+    <div class="bg-circle"></div>
+    <div class="bg-circle"></div>
+    <div class="bg-circle"></div>
+
     <div class="container">
         <div class="login-screen">
-            <h1>🎯 Jeopardy Spil</h1>
+            <h1>🎵 Musikquiz</h1>
+            <p class="subtitle">Vælg din spilletilstand og gå i gang!</p>
+
             <div class="input-group">
                 <input type="text" id="playerName" placeholder="Indtast dit navn" maxlength="20">
-                <input type="text" id="gameCode" placeholder="Spil kode (kun for spillere)">
-                <button class="btn" onclick="joinAsPlayer()">Tilslut som spiller</button>
-                <button class="btn btn-host" onclick="createAsHost(false)">Opret solo spil som vært</button>
-                <button class="btn btn-host" onclick="createAsHost(true)" style="background: linear-gradient(45deg, #667eea, #764ba2);">Opret hold spil som vært</button>
+            </div>
+
+            <div class="mode-selection">
+                <h2>Opret Spil som Vært</h2>
+                <div class="mode-cards">
+                    <div class="mode-card" onclick="createAsHost(false)">
+                        <span class="mode-icon">👤</span>
+                        <div class="mode-title">Solo Spil</div>
+                        <div class="mode-description">Spil individuelt - hver spiller for sig selv</div>
+                    </div>
+                    <div class="mode-card" onclick="createAsHost(true)">
+                        <span class="mode-icon">👥</span>
+                        <div class="mode-title">Hold Spil</div>
+                        <div class="mode-description">Spil i hold - samarbejd om at vinde</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="join-section">
+                <h2>Eller tilslut til et eksisterende spil</h2>
+                <div class="input-group">
+                    <input type="text" id="gameCode" placeholder="Indtast spil kode">
+                    <button class="btn" onclick="joinAsPlayer()">Tilslut som Spiller</button>
+                </div>
             </div>
         </div>
     </div>
