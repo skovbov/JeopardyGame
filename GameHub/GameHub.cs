@@ -87,6 +87,16 @@ public class GameHub : Hub
             board = game.Board
         });
 
+        // Send music file to host only
+        if (!string.IsNullOrEmpty(question.MusicFile))
+        {
+            await Clients.Client(game.HostConnectionId).SendAsync("PlayMusic", new
+            {
+                musicFile = question.MusicFile,
+                answer = question.Answer
+            });
+        }
+
         // Don't start timer here - timer will start when first player buzzes
         await Clients.Group(game.GameCode).SendAsync("BuzzingStarted");
     }
@@ -145,7 +155,8 @@ public class GameHub : Hub
             // Handle timer logic for team mode
             if (game.CurrentBuzzes.Count == 1)
             {
-                // First team buzzed - start their 10 second timer
+                // First team buzzed - stop music and start their 10 second timer
+                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
                 game.IsTimerRunning = true;
                 game.IsExtraTimeActive = false;
                 await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
@@ -154,7 +165,8 @@ public class GameHub : Hub
             }
             else if (!game.IsTimerRunning && game.IsExtraTimeActive)
             {
-                // Team buzzed during extra time - start their 10 second timer immediately
+                // Team buzzed during extra time - stop music and start their 10 second timer immediately
+                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
                 game.IsTimerRunning = true;
                 game.IsExtraTimeActive = false;
                 await Clients.GroupExcept(game.GameCode, game.HostConnectionId).SendAsync("BuzzTimerStarted", new { teamId = team.Id, duration = 10 });
@@ -219,6 +231,8 @@ public class GameHub : Hub
                 if (game.IsTimerRunning)
                 {
                     await Task.Delay(10000);
+                    // Resume music after timer
+                    await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
                 }
                 
                 // Check if there are more teams that buzzed while timer was running
@@ -228,9 +242,13 @@ public class GameHub : Hub
                     var nextBuzz = game.CurrentBuzzes[processedBuzzes];
                     if (game.Teams.TryGetValue(nextBuzz.Player.TeamId!, out var nextTeam))
                     {
+                        // Stop music for next team's timer
+                        await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
                         await Clients.GroupExcept(game.GameCode, game.HostConnectionId)
                             .SendAsync("BuzzTimerStarted", new { teamId = nextTeam.Id, duration = 10 });
                         await Task.Delay(10000);
+                        // Resume music after timer
+                        await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
                     }
                     processedBuzzes++;
                 }
@@ -246,10 +264,14 @@ public class GameHub : Hub
 
             var currentBuzzCount = game.CurrentBuzzes.Count;
             
+            // Resume music after timer expires
+            await Clients.Client(game.HostConnectionId).SendAsync("ResumeMusic");
+            
             // Check if another team buzzed during the timer
             if (currentBuzzCount > 1 && game.BuzzedTeamIds.Count > 1)
             {
-                // Another team buzzed - start their timer
+                // Another team buzzed - stop music and start their timer
+                await Clients.Client(game.HostConnectionId).SendAsync("StopMusic");
                 var nextBuzz = game.CurrentBuzzes[currentBuzzCount - 1];
                 if (nextBuzz.Player.TeamId != null && game.Teams.TryGetValue(nextBuzz.Player.TeamId, out var nextTeam))
                 {
@@ -353,6 +375,14 @@ public class GameHub : Hub
                 });
             }
         }
+    }
+
+    public async Task StopMusic()
+    {
+        var game = _gameManager.GetGameByConnectionId(Context.ConnectionId);
+        if (game == null || game.HostConnectionId != Context.ConnectionId) return;
+
+        await Clients.Caller.SendAsync("MusicStopped");
     }
 
     // Team management methods

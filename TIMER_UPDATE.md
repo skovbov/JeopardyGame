@@ -7,7 +7,15 @@
 - **Nu:** 10 sekunders extra time
 - Gælder både solo mode og team mode
 
-### 2. Ny Sekventiel Timer Logik for Team Mode
+### 2. Timer Vises KUN på Progress Bar (Host Side)
+- **Vigtigt:** Timer information vises KUN på progress bar'en hos hosten
+- Spillere ser IKKE nedtælling eller timer information på deres buzz-knap
+- Spillere ser kun simple beskeder:
+  - "🔥 TRYK FOR AT BUZZE! 🔥" - Når de kan buzze
+  - "✅ Du har buzzet!" - Når deres hold har buzzet
+  - "⏰ Tiden er udløbet!" - Når tiden løber ud
+
+### 3. Ny Sekventiel Timer Logik for Team Mode
 
 #### Hvordan det virker nu:
 
@@ -35,7 +43,7 @@
 - Alle timere afspilles sekventielt (10 + 10 + 10... sekunder)
 - INGEN extra time da alle hold allerede har buzzet
 
-### 3. Tekniske Ændringer
+### 4. Tekniske Ændringer
 
 #### Game Model (Game.cs)
 Tilføjet nye properties:
@@ -56,12 +64,19 @@ public bool IsExtraTimeActive { get; set; } = false;
 #### Host.cshtml
 - Opdateret `startExtendedBuzzTimer()` til 10 sekunder
 - Tilføjet event handler for `BuzzExtraTimeStarted`
-- Progress bar viser nu korrekt "Extra tid: 10" i stedet for "Extra tid: 20"
+- Tilføjet ny `startTeamTimer()` funktion til at vise team-specifik timer på progress bar
+- Progress bar viser nu:
+  - Solo mode: "Timer: Xs" for første buzz, "Extra tid: Xs" for extra time
+  - Team mode: "Hold navn: Xs" for hvert holds timer
+- Timer information vises KUN på progress bar'en hos hosten
 
 #### Play.cshtml
-- Opdateret `BuzzTimerStarted` handler til at vise teamspecifik information
-- Tilføjet `BuzzExtraTimeStarted` handler til at vise extra time besked
-- Spillere ser nu "Dit holds tid" vs "Andet hold svarer"
+- Fjernet timer display fra buzz-knappen
+- Spillere ser IKKE timer information - de ser kun:
+  - "🔥 TRYK FOR AT BUZZE! 🔥" når de kan buzze
+  - "✅ Du har buzzet!" når deres hold har buzzet
+  - "⏰ Tiden er udløbet!" når tiden løber ud
+- Timer information vises kun på host siden
 
 ## Timer Flow Eksempler
 

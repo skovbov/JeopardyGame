@@ -330,6 +330,39 @@
             margin-right: 10px;
         }
 
+        /* Music Controls */
+        .music-controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .music-controls button {
+            margin: 5px;
+        }
+
+        .answer-display {
+            background: rgba(255, 215, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            border: 2px solid #FFD700;
+            text-align: center;
+        }
+
+        .btn-music {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+        }
+
+        .btn-answer {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #000;
+        }
+
         @@media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -517,6 +550,15 @@
 
         <div id="buzzPanel" class="buzz-panel hidden">
             <h2>Spillere der buzzede:</h2>
+            
+            <!-- Music Controls -->
+            <div id="musicControls" class="music-controls hidden">
+                <h3>🎵 Musik Kontrol</h3>
+                <button class="btn btn-music" onclick="stopMusicManually()">⏹️ Stop Musik</button>
+                <button class="btn btn-answer" onclick="revealAnswer()">💡 Vis Svar</button>
+                <div id="answerDisplay" class="answer-display hidden"></div>
+            </div>
+            
             <div id="timerDisplay" class="timer-display">10</div>
             <div id="progressContainer" class="progress-container">
                 <div id="progressBar" class="progress-bar"></div>
@@ -526,6 +568,9 @@
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
             <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
         </div>
+        
+        <!-- Hidden audio player -->
+        <audio id="musicPlayer" style="display: none;"></audio>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
@@ -542,8 +587,14 @@
             isTeamMode: false,
             isGameStarted: false,
             buzzTimer: null,
-            timeLeft: 10
+            timeLeft: 10,
+            currentMusicFile: null,
+            currentAnswer: null,
+            musicPlayer: null
         };
+
+        // Initialize music player
+        gameData.musicPlayer = document.getElementById('musicPlayer');
 
         // Start connection
         connection.start().then(function () {
@@ -626,6 +677,40 @@
         connection.on("BuzzExtraTimeStarted", function (data) {
             // Extra time started (10 seconds for remaining teams to buzz)
             startExtendedBuzzTimer();
+        });
+
+        // Music event handlers
+        connection.on("PlayMusic", function (data) {
+            gameData.currentMusicFile = data.musicFile;
+            gameData.currentAnswer = data.answer;
+            
+            if (gameData.musicPlayer && data.musicFile) {
+                gameData.musicPlayer.src = data.musicFile;
+                gameData.musicPlayer.loop = true;
+                gameData.musicPlayer.play().catch(err => console.error('Music play error:', err));
+                
+                // Show music controls
+                document.getElementById('musicControls').classList.remove('hidden');
+                document.getElementById('answerDisplay').classList.add('hidden');
+            }
+        });
+
+        connection.on("StopMusic", function () {
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+            }
+        });
+
+        connection.on("ResumeMusic", function () {
+            if (gameData.musicPlayer && gameData.currentMusicFile) {
+                gameData.musicPlayer.play().catch(err => console.error('Music resume error:', err));
+            }
+        });
+
+        connection.on("MusicStopped", function () {
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+            }
         });
 
         function renderBoard() {
@@ -881,6 +966,17 @@
 
         function resetBuzz() {
             stopBuzzTimer();
+            // Stop music
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+                gameData.musicPlayer.currentTime = 0;
+            }
+            // Hide music controls
+            document.getElementById('musicControls').classList.add('hidden');
+            document.getElementById('answerDisplay').classList.add('hidden');
+            gameData.currentMusicFile = null;
+            gameData.currentAnswer = null;
+            
             // Hide progress bar and reset timer display
             document.getElementById('progressContainer').style.display = 'none';
             document.getElementById('timerDisplay').style.display = 'block';
@@ -889,6 +985,18 @@
 
         function backToBoard() {
             stopBuzzTimer();
+            
+            // Stop music
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+                gameData.musicPlayer.currentTime = 0;
+            }
+            // Hide music controls
+            document.getElementById('musicControls').classList.add('hidden');
+            document.getElementById('answerDisplay').classList.add('hidden');
+            gameData.currentMusicFile = null;
+            gameData.currentAnswer = null;
+            
             document.getElementById('buzzPanel').classList.add('hidden');
             document.getElementById('gameBoard').classList.remove('hidden');
             
@@ -933,6 +1041,25 @@
                 updatePlayersDisplay();
             }
         });
+
+        // Music control functions
+        function stopMusicManually() {
+            if (gameData.musicPlayer) {
+                gameData.musicPlayer.pause();
+            }
+            connection.invoke("StopMusic");
+        }
+
+        function revealAnswer() {
+            const answerDisplay = document.getElementById('answerDisplay');
+            if (gameData.currentAnswer) {
+                answerDisplay.textContent = `🎵 Svar: ${gameData.currentAnswer}`;
+                answerDisplay.classList.remove('hidden');
+            } else {
+                answerDisplay.textContent = '🎵 Ingen svar tilgængeligt';
+                answerDisplay.classList.remove('hidden');
+            }
+        }
 
         // Team mode event handlers
         connection.on("TeamCreated", function (data) {
