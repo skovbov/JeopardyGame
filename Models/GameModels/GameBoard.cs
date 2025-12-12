@@ -43,6 +43,14 @@
             new Question { Value = 300, IsUsed = false, MusicFile = "/music/classic3.mp3", Answer = "Klassisk sang 3" },
             new Question { Value = 400, IsUsed = false, MusicFile = "/music/classic4.mp3", Answer = "Klassisk sang 4" },
             new Question { Value = 500, IsUsed = false, MusicFile = "/music/classic5.mp3", Answer = "Klassisk sang 5" }
+        }},
+        new Category { Name = "90'erne", Questions = new List<Question>
+        {
+            new Question { Value = 100, IsUsed = false, MusicFile = "/music/90s1.mp3", Answer = "90'erne sang 1" },
+            new Question { Value = 200, IsUsed = false, MusicFile = "/music/90s2.mp3", Answer = "90'erne sang 2" },
+            new Question { Value = 300, IsUsed = false, MusicFile = "/music/90s3.mp3", Answer = "90'erne sang 3" },
+            new Question { Value = 400, IsUsed = false, MusicFile = "/music/90s4.mp3", Answer = "90'erne sang 4" },
+            new Question { Value = 500, IsUsed = false, MusicFile = "/music/90s5.mp3", Answer = "90'erne sang 5" }
         }}
     };
     }
