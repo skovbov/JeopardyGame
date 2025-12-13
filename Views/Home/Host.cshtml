@@ -577,6 +577,15 @@
         <div id="buzzPanel" class="buzz-panel hidden">
             <h2>Spillere der buzzede:</h2>
             
+            <!-- Buzz list at the top so it's visible immediately -->
+            <div id="buzzList" class="buzz-list"></div>
+            
+            <!-- Simple countdown timer -->
+            <div id="countdownTimer" class="countdown-timer hidden">
+                <h2>⏱️ Timer</h2>
+                <div id="countdownDisplay" class="countdown-display">10</div>
+            </div>
+            
             <!-- Music Controls -->
             <div id="musicControls" class="music-controls hidden">
                 <h3>🎵 Musik Kontrol</h3>
@@ -586,13 +595,6 @@
                 <div id="answerDisplay" class="answer-display hidden"></div>
             </div>
             
-            <!-- Simple countdown timer -->
-            <div id="countdownTimer" class="countdown-timer hidden">
-                <h2>⏱️ Timer</h2>
-                <div id="countdownDisplay" class="countdown-display">10</div>
-            </div>
-            
-            <div id="buzzList" class="buzz-list"></div>
             <button class="btn" onclick="resetBuzz()">Nulstil Buzzer</button>
             <button class="btn" onclick="backToBoard()">Tilbage til Brættet</button>
         </div>
