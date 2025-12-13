@@ -44,13 +44,13 @@
             new Question { Value = 400, IsUsed = false, MusicFile = "/audio/top400.mp3", Answer = "Sweater Weather - The Neighbourhood" },
             new Question { Value = 500, IsUsed = false, MusicFile = "/audio/top500.mp3", Answer = "Iris - The Goo Goo Dolls" }
         }},
-        new Category { Name = "Guilty Pleasures", Questions = new List<Question>
+        new Category { Name = "Dansk ungdom", Questions = new List<Question>
         {
-            new Question { Value = 100, IsUsed = false, MusicFile = "/audio/guilt100.mp3", Answer = "Guilty Pleasure 1" },
-            new Question { Value = 200, IsUsed = false, MusicFile = "/audio/guilt200.mp3", Answer = "Guilty Pleasure 2" },
-            new Question { Value = 300, IsUsed = false, MusicFile = "/audio/guilt300.mp3", Answer = "Guilty Pleasure 3" },
-            new Question { Value = 400, IsUsed = false, MusicFile = "/audio/guilt400.mp3", Answer = "Guilty Pleasure 4" },
-            new Question { Value = 500, IsUsed = false, MusicFile = "/audio/guilt500.mp3", Answer = "Guilty Pleasure 5" }
+            new Question { Value = 100, IsUsed = false, MusicFile = "/audio/ung100.mp3", Answer = "For Evigt Ung - Sleimann" },
+            new Question { Value = 200, IsUsed = false, MusicFile = "/audio/ung200.mp3", Answer = "Lyser I Mørke - Medina" },
+            new Question { Value = 300, IsUsed = false, MusicFile = "/audio/ung300.mp3", Answer = "Trip Nok - Jamaika, Sivas" },
+            new Question { Value = 400, IsUsed = false, MusicFile = "/audio/ung400.mp3", Answer = "BDK - Kesi, Gilli" },
+            new Question { Value = 500, IsUsed = false, MusicFile = "/audio/ung500.mp3", Answer = "Skyldig - Blak" }
         }}
     };
     }
